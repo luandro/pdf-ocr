@@ -4,6 +4,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import FormData from 'form-data';
+import fetch from 'node-fetch';
 
 // Load environment variables
 dotenv.config();
@@ -52,15 +54,9 @@ export async function performOcr(
     throw new Error('MISTRAL_API_KEY environment variable is not set');
   }
 
-  // Initialize Mistral client with timeout
+  // Initialize Mistral client
   const mistral = new Mistral({
     apiKey: process.env.MISTRAL_API_KEY,
-    fetch: (url, options) => {
-      return fetch(url, {
-        ...options,
-        signal: AbortSignal.timeout(opts.timeout),
-      });
-    },
   });
 
   // Implement retry logic
@@ -84,17 +80,35 @@ export async function performOcr(
           console.log(`Created temporary file: ${tempFilePath}`);
         }
 
-        // Create a blob from the file
-        const fileBlob = new Blob([fs.readFileSync(tempFilePath)], { type: 'image/png' });
+        // Create a FormData object and append the file
+        const formData = new FormData();
+        formData.append('file', fs.createReadStream(tempFilePath), {
+          filename: path.basename(tempFilePath),
+          contentType: 'image/png',
+        });
 
         // Upload the file to Mistral
         if (opts.verbose) {
           console.log('Uploading file to Mistral API...');
         }
 
-        const uploadResponse = await mistral.files.upload({
-          file: fileBlob,
+        // Use node-fetch to upload the file directly
+        const apiKey = process.env.MISTRAL_API_KEY;
+        const response = await fetch('https://api.mistral.ai/v1/files', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: formData,
+          timeout: opts.timeout,
         });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`File upload failed: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const uploadResponse = await response.json();
 
         if (opts.verbose) {
           console.log(`File uploaded successfully with ID: ${uploadResponse.id}`);

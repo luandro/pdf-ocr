@@ -7,7 +7,7 @@ declare module '@mistralai/mistralai' {
 
     files: {
       upload(params: {
-        file: Blob;
+        file: Blob | FormData | any;
       }): Promise<FileUploadResponse>;
     };
 
