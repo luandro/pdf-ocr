@@ -35,8 +35,8 @@ export async function performOcr(imageBuffer: Buffer): Promise<string> {
     });
 
     // Return the extracted text
-    // According to the API documentation, the text is in the 'content' property
-    return result.content || '';
+    // The text could be in either the 'content' or 'text' property depending on the API version
+    return result.content || result.text || '';
   } catch (error) {
     // Handle errors
     if (error instanceof Error) {

@@ -15,6 +15,7 @@ declare module '@mistralai/mistralai' {
 
   interface OCRResponse {
     // Add the actual properties based on the API documentation
-    content: string;
+    content?: string;
+    text?: string;
   }
 }
