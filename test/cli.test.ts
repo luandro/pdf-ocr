@@ -113,8 +113,18 @@ describe('CLI', () => {
     // Create a CLI instance with custom options
     const program = createCli();
 
-    // Parse arguments with custom options
-    program.parse(['node', 'cli.js', '--input', 'custom.pdf', '--output', 'result.pdf', '--concurrency', '5', '--max-pages', '10']);
+    // Parse arguments with custom options including OCR options
+    program.parse([
+      'node', 'cli.js',
+      '--input', 'custom.pdf',
+      '--output', 'result.pdf',
+      '--concurrency', '5',
+      '--max-pages', '10',
+      '--retries', '5',
+      '--retry-delay', '2000',
+      '--timeout', '60000',
+      '--verbose'
+    ]);
 
     // Get the parsed options
     const options = program.opts();
@@ -124,6 +134,10 @@ describe('CLI', () => {
     expect(options.output).toBe('result.pdf');
     expect(options.concurrency).toBe(5);
     expect(options.maxPages).toBe(10);
+    expect(options.retries).toBe(5);
+    expect(options.retryDelay).toBe(2000);
+    expect(options.timeout).toBe(60000);
+    expect(options.verbose).toBe(true);
   });
 
   test('should handle max-pages parameter', async () => {
@@ -144,5 +158,27 @@ describe('CLI', () => {
     expect(performOcr).toHaveBeenCalledTimes(1);
     expect(textToPdf).toHaveBeenCalledTimes(1);
     expect(mergePdfs).toHaveBeenCalledWith([Buffer.from('text pdf content')]);
+  });
+
+  test('should pass OCR options to performOcr', async () => {
+    // Reset the mocks to ensure clean state
+    jest.clearAllMocks();
+
+    // Create custom OCR options
+    const ocrOptions = {
+      maxRetries: 5,
+      retryDelay: 2000,
+      timeout: 60000,
+      verbose: true
+    };
+
+    // Process a PDF with OCR options
+    await processPdf('input.pdf', 'output.pdf', 2, undefined, ocrOptions);
+
+    // Verify that performOcr was called with the OCR options
+    expect(performOcr).toHaveBeenCalledWith(
+      expect.any(Buffer),
+      ocrOptions
+    );
   });
 });

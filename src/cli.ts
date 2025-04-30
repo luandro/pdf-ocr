@@ -5,7 +5,7 @@ import path from 'path';
 import { Command } from 'commander';
 import { splitPdf } from './splitPdf';
 import { renderPdfToPng } from './renderPdfToPng';
-import { performOcr } from './ocr';
+import { performOcr, OcrOptions } from './ocr';
 import { textToPdf } from './textToPdf';
 import { mergePdfs } from './mergePdfs';
 
@@ -15,49 +15,51 @@ import { mergePdfs } from './mergePdfs';
  * @param outputPath - Path to save the output PDF file
  * @param concurrency - Number of pages to process in parallel
  * @param maxPages - Maximum number of pages to process
+ * @param ocrOptions - Options for OCR processing
  */
 export async function processPdf(
   inputPath: string,
   outputPath: string,
   concurrency: number = 2,
-  maxPages?: number
+  maxPages?: number,
+  ocrOptions?: OcrOptions
 ): Promise<void> {
   try {
     // Read the input PDF
     const inputPdfBuffer = fs.readFileSync(inputPath);
-    
+
     // Split the PDF into individual pages
     const pdfPages = await splitPdf(inputPdfBuffer, maxPages);
-    
+
     // Process pages in batches based on concurrency
     const processedPages: Buffer[] = [];
-    
+
     // Process pages in batches
     for (let i = 0; i < pdfPages.length; i += concurrency) {
       const batch = pdfPages.slice(i, i + concurrency);
-      
+
       // Process each page in the batch concurrently
       const batchPromises = batch.map(async (pageBuffer) => {
         // Convert PDF page to PNG
         const pngBuffer = await renderPdfToPng(pageBuffer);
-        
+
         // Perform OCR on the PNG
-        const ocrText = await performOcr(pngBuffer);
-        
+        const ocrText = await performOcr(pngBuffer, ocrOptions);
+
         // Convert OCR text back to PDF
         return textToPdf(ocrText);
       });
-      
+
       // Wait for all pages in the batch to be processed
       const batchResults = await Promise.all(batchPromises);
-      
+
       // Add the processed pages to the result
       processedPages.push(...batchResults);
     }
-    
+
     // Merge the processed pages back into a single PDF
     const outputPdfBuffer = await mergePdfs(processedPages);
-    
+
     // Write the output PDF
     fs.writeFileSync(outputPath, outputPdfBuffer);
   } catch (error) {
@@ -72,7 +74,7 @@ export async function processPdf(
  */
 export function createCli(): Command {
   const program = new Command();
-  
+
   program
     .name('pdf-ocr')
     .description('OCR a PDF file using Mistral API')
@@ -81,24 +83,36 @@ export function createCli(): Command {
     .requiredOption('-o, --output <path>', 'Output PDF file path')
     .option('-c, --concurrency <number>', 'Number of pages to process in parallel', (value) => parseInt(value, 10), 2)
     .option('-m, --max-pages <number>', 'Maximum number of pages to process', (value) => parseInt(value, 10))
+    .option('-r, --retries <number>', 'Maximum number of OCR retry attempts', (value) => parseInt(value, 10), 3)
+    .option('-d, --retry-delay <number>', 'Delay between OCR retries in milliseconds', (value) => parseInt(value, 10), 1000)
+    .option('-t, --timeout <number>', 'Timeout for OCR API requests in milliseconds', (value) => parseInt(value, 10), 30000)
+    .option('-v, --verbose', 'Enable verbose logging for OCR process')
     .action(async (options) => {
       try {
         // Resolve paths to absolute paths
         const inputPath = path.resolve(options.input);
         const outputPath = path.resolve(options.output);
-        
+
+        // Create OCR options from CLI options
+        const ocrOptions: OcrOptions = {
+          maxRetries: options.retries,
+          retryDelay: options.retryDelay,
+          timeout: options.timeout,
+          verbose: options.verbose || false
+        };
+
         console.log(`Processing ${inputPath}...`);
-        
+
         // Process the PDF
-        await processPdf(inputPath, outputPath, options.concurrency, options.maxPages);
-        
+        await processPdf(inputPath, outputPath, options.concurrency, options.maxPages, ocrOptions);
+
         console.log(`OCR complete! Output saved to ${outputPath}`);
       } catch (error) {
         console.error('Error:', error instanceof Error ? error.message : String(error));
         process.exit(1);
       }
     });
-  
+
   return program;
 }
 

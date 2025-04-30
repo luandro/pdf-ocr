@@ -107,8 +107,12 @@ describe('OCR Module', () => {
       }
     } as unknown as Mistral));
 
-    // Call the function and expect it to throw
-    await expect(performOcr(sampleImageBuffer)).rejects.toThrow('OCR failed: API Error');
+    // Call the function with only 1 retry to speed up the test
+    await expect(performOcr(sampleImageBuffer, { maxRetries: 1, retryDelay: 10 }))
+      .rejects.toThrow('OCR failed after 1 attempts: API Error');
+
+    // Verify that the API was called exactly once (no retries with maxRetries=1)
+    expect(mockOcrProcess).toHaveBeenCalledTimes(1);
   });
 
   test('should handle missing API key', async () => {
@@ -135,7 +139,59 @@ describe('OCR Module', () => {
       }
     } as unknown as Mistral));
 
-    // Call the function and expect it to throw
-    await expect(performOcr(sampleImageBuffer)).rejects.toThrow('OCR failed: Unknown error');
+    // Call the function with only 1 retry to speed up the test
+    await expect(performOcr(sampleImageBuffer, { maxRetries: 1, retryDelay: 10 }))
+      .rejects.toThrow('OCR failed after 1 attempts: Unknown error');
+  });
+
+  test('should retry on failure and succeed eventually', async () => {
+    // Mock implementation that fails twice then succeeds
+    const mockOcrProcess = jest.fn()
+      .mockRejectedValueOnce(new Error('First failure'))
+      .mockRejectedValueOnce(new Error('Second failure'))
+      .mockResolvedValueOnce({ content: 'Success after retries' });
+
+    // Setup the mock
+    (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      ocr: {
+        process: mockOcrProcess
+      }
+    } as unknown as Mistral));
+
+    // Call the function with 3 retries
+    const result = await performOcr(sampleImageBuffer, {
+      maxRetries: 3,
+      retryDelay: 10,
+      verbose: true // Test verbose mode
+    });
+
+    // Verify the result
+    expect(result).toBe('Success after retries');
+
+    // Verify that the API was called exactly 3 times (2 failures + 1 success)
+    expect(mockOcrProcess).toHaveBeenCalledTimes(3);
+  });
+
+  test('should respect timeout option', async () => {
+    // Mock implementation
+    const mockOcrProcess = jest.fn().mockResolvedValue({
+      content: 'Success with timeout'
+    });
+
+    // Setup the mock
+    (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      ocr: {
+        process: mockOcrProcess
+      }
+    } as unknown as Mistral));
+
+    // Call the function with custom timeout
+    await performOcr(sampleImageBuffer, { timeout: 5000 });
+
+    // Verify that Mistral was constructed with the correct options
+    expect(Mistral).toHaveBeenCalledWith(expect.objectContaining({
+      apiKey: 'test-api-key',
+      fetch: expect.any(Function)
+    }));
   });
 });

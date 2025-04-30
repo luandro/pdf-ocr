@@ -32,8 +32,11 @@ cp .env.example .env
 # Basic usage
 npm start -- --input input.pdf --output output.pdf
 
-# With options
+# With processing options
 npm start -- --input input.pdf --output output.pdf --concurrency 3 --max-pages 10
+
+# With OCR options for handling network issues
+npm start -- --input input.pdf --output output.pdf --retries 5 --timeout 60000 --retry-delay 2000 --verbose
 ```
 
 Or if installed globally:
@@ -44,12 +47,19 @@ pdf-ocr --input input.pdf --output output.pdf
 
 ## Options
 
+### Basic Options
 - `--input, -i`: Input PDF file path (required)
 - `--output, -o`: Output PDF file path (required)
 - `--concurrency, -c`: Number of pages to process in parallel (default: 2)
 - `--max-pages, -m`: Maximum number of pages to process (default: all)
 - `--help, -h`: Display help information
 - `--version, -v`: Display version information
+
+### OCR Options
+- `--retries, -r`: Maximum number of OCR retry attempts (default: 3)
+- `--retry-delay, -d`: Delay between OCR retries in milliseconds (default: 1000)
+- `--timeout, -t`: Timeout for OCR API requests in milliseconds (default: 30000)
+- `--verbose, -v`: Enable verbose logging for OCR process
 
 ## Development
 
@@ -104,6 +114,11 @@ The processing pipeline works as follows:
 - **Error: MISTRAL_API_KEY environment variable is not set**: Make sure you've created a `.env` file with your API key.
 - **Error: Invalid PDF**: The input file might be corrupted or password-protected.
 - **Slow processing**: Try increasing the concurrency parameter (`--concurrency`) to process more pages in parallel.
+- **Network errors during OCR**: If you encounter network errors like "socket connection was closed unexpectedly", try the following:
+  - Increase the timeout with `--timeout 60000` (60 seconds)
+  - Increase the number of retries with `--retries 5`
+  - Increase the delay between retries with `--retry-delay 2000` (2 seconds)
+  - Use the `--verbose` flag to see detailed logs of the OCR process
 
 ## License
 

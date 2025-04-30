@@ -1,6 +1,9 @@
 declare module '@mistralai/mistralai' {
   export class Mistral {
-    constructor(options: { apiKey: string });
+    constructor(options: {
+      apiKey: string;
+      fetch?: (url: string, options: any) => Promise<Response>;
+    });
 
     ocr: {
       process(params: {
