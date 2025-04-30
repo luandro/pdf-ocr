@@ -1,6 +1,5 @@
 import { Mistral } from '@mistralai/mistralai';
 import dotenv from 'dotenv';
-import { v4 as uuidv4 } from 'uuid';
 
 // Load environment variables
 dotenv.config();
@@ -63,45 +62,19 @@ export async function performOcr(
         console.log(`OCR attempt ${attempt}/${opts.maxRetries}...`);
       }
 
-      // Step 1: Upload the PDF file
+      // Convert the PDF buffer to base64
+      const base64Pdf = pdfBuffer.toString('base64');
+
+      // Use the OCR API directly with the base64 encoded PDF
       if (opts.verbose) {
-        console.log('Uploading PDF to Mistral API...');
-      }
-
-      const uploadedPdf = await mistral.files.upload({
-        file: {
-          fileName: `document-${uuidv4()}.pdf`,
-          content: pdfBuffer,
-        },
-      });
-
-      if (opts.verbose) {
-        console.log(`PDF uploaded successfully with ID: ${uploadedPdf.id}`);
-      }
-
-      // Step 2: Get a signed URL for the uploaded file
-      if (opts.verbose) {
-        console.log('Getting signed URL for the uploaded PDF...');
-      }
-
-      const signedUrl = await mistral.files.getSignedUrl({
-        fileId: uploadedPdf.id,
-      });
-
-      if (opts.verbose) {
-        console.log('Signed URL obtained successfully');
-      }
-
-      // Step 3: Process the PDF with OCR
-      if (opts.verbose) {
-        console.log('Processing OCR with uploaded PDF...');
+        console.log('Processing OCR with base64 encoded PDF...');
       }
 
       const result = await mistral.ocr.process({
         model: 'mistral-ocr-latest',
         document: {
           type: 'document_url',
-          documentUrl: signedUrl.url,
+          documentUrl: `data:application/pdf;base64,${base64Pdf}`,
         },
       });
 
@@ -138,7 +111,7 @@ export async function performOcr(
   // If we've exhausted all retries, throw the last error
   if (lastError) {
     throw new Error(`OCR failed after ${opts.maxRetries} attempts: ${lastError.message}`);
-  } else {
-    throw new Error(`OCR failed after ${opts.maxRetries} attempts: Unknown error`);
   }
+
+  throw new Error(`OCR failed after ${opts.maxRetries} attempts: Unknown error`);
 }
