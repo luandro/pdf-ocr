@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+
+# Coverage reports
+coverage/
+
+# Test fixtures (except sample PDFs)
+fixtures/*
+!fixtures/*.pdf
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
