@@ -3,18 +3,15 @@
 import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
-import { splitPdf } from './splitPdf';
-import { renderPdfToPng } from './renderPdfToPng';
 import { performOcr, OcrOptions } from './ocr';
 import { textToPdf } from './textToPdf';
-import { mergePdfs } from './mergePdfs';
 
 /**
  * Process a PDF file through the OCR pipeline
  * @param inputPath - Path to the input PDF file
  * @param outputPath - Path to save the output PDF file
- * @param concurrency - Number of pages to process in parallel
- * @param maxPages - Maximum number of pages to process
+ * @param concurrency - Number of pages to process in parallel (not used with direct PDF upload)
+ * @param maxPages - Maximum number of pages to process (not used with direct PDF upload)
  * @param ocrOptions - Options for OCR processing
  */
 export async function processPdf(
@@ -28,37 +25,11 @@ export async function processPdf(
     // Read the input PDF
     const inputPdfBuffer = fs.readFileSync(inputPath);
 
-    // Split the PDF into individual pages
-    const pdfPages = await splitPdf(inputPdfBuffer, maxPages);
+    // Perform OCR directly on the PDF
+    const ocrText = await performOcr(inputPdfBuffer, ocrOptions);
 
-    // Process pages in batches based on concurrency
-    const processedPages: Buffer[] = [];
-
-    // Process pages in batches
-    for (let i = 0; i < pdfPages.length; i += concurrency) {
-      const batch = pdfPages.slice(i, i + concurrency);
-
-      // Process each page in the batch concurrently
-      const batchPromises = batch.map(async (pageBuffer) => {
-        // Convert PDF page to PNG
-        const pngBuffer = await renderPdfToPng(pageBuffer);
-
-        // Perform OCR on the PNG
-        const ocrText = await performOcr(pngBuffer, ocrOptions);
-
-        // Convert OCR text back to PDF
-        return textToPdf(ocrText);
-      });
-
-      // Wait for all pages in the batch to be processed
-      const batchResults = await Promise.all(batchPromises);
-
-      // Add the processed pages to the result
-      processedPages.push(...batchResults);
-    }
-
-    // Merge the processed pages back into a single PDF
-    const outputPdfBuffer = await mergePdfs(processedPages);
+    // Convert OCR text back to PDF
+    const outputPdfBuffer = await textToPdf(ocrText);
 
     // Write the output PDF
     fs.writeFileSync(outputPath, outputPdfBuffer);

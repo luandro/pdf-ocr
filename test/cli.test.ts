@@ -7,18 +7,12 @@ import { createCli, processPdf } from '../src/cli';
 // Mock the modules we'll use
 jest.mock('fs');
 jest.mock('path');
-jest.mock('../src/splitPdf');
-jest.mock('../src/renderPdfToPng');
 jest.mock('../src/ocr');
 jest.mock('../src/textToPdf');
-jest.mock('../src/mergePdfs');
 
 // Import the mocked modules
-import { splitPdf } from '../src/splitPdf';
-import { renderPdfToPng } from '../src/renderPdfToPng';
 import { performOcr } from '../src/ocr';
 import { textToPdf } from '../src/textToPdf';
-import { mergePdfs } from '../src/mergePdfs';
 
 describe('CLI', () => {
   // Reset all mocks before each test
@@ -33,14 +27,8 @@ describe('CLI', () => {
     (path.resolve as jest.Mock).mockImplementation((p) => p);
 
     // Mock the PDF processing functions
-    (splitPdf as jest.Mock).mockResolvedValue([
-      Buffer.from('page 1'),
-      Buffer.from('page 2'),
-    ]);
-    (renderPdfToPng as jest.Mock).mockResolvedValue(Buffer.from('png content'));
     (performOcr as jest.Mock).mockResolvedValue('OCR text result');
     (textToPdf as jest.Mock).mockResolvedValue(Buffer.from('text pdf content'));
-    (mergePdfs as jest.Mock).mockResolvedValue(Buffer.from('merged pdf content'));
   });
 
   test('should parse arguments correctly', () => {
@@ -65,48 +53,27 @@ describe('CLI', () => {
 
     // Verify each step was called with the correct arguments
     expect(fs.readFileSync).toHaveBeenCalledWith('input.pdf');
-    expect(splitPdf).toHaveBeenCalledWith(expect.any(Buffer), undefined);
-    expect(renderPdfToPng).toHaveBeenCalledTimes(2);
-    expect(performOcr).toHaveBeenCalledTimes(2);
-    expect(textToPdf).toHaveBeenCalledTimes(2);
-    expect(mergePdfs).toHaveBeenCalledWith([
-      Buffer.from('text pdf content'),
-      Buffer.from('text pdf content'),
-    ]);
-    expect(fs.writeFileSync).toHaveBeenCalledWith('output.pdf', Buffer.from('merged pdf content'));
+    expect(performOcr).toHaveBeenCalledWith(expect.any(Buffer), undefined);
+    expect(textToPdf).toHaveBeenCalledWith('OCR text result');
+    expect(fs.writeFileSync).toHaveBeenCalledWith('output.pdf', expect.any(Buffer));
   });
 
   test('should handle concurrency parameter', async () => {
-    // Mock a larger PDF with more pages
-    (splitPdf as jest.Mock).mockResolvedValue([
-      Buffer.from('page 1'),
-      Buffer.from('page 2'),
-      Buffer.from('page 3'),
-      Buffer.from('page 4'),
-    ]);
-
     // Process with concurrency of 2
+    // Note: Concurrency parameter is no longer used with direct PDF upload
     await processPdf('input.pdf', 'output.pdf', 2);
 
-    // Verify that the processing was done in batches
-    // This is hard to test directly, but we can verify that all pages were processed
-    expect(renderPdfToPng).toHaveBeenCalledTimes(4);
-    expect(performOcr).toHaveBeenCalledTimes(4);
-    expect(textToPdf).toHaveBeenCalledTimes(4);
-    expect(mergePdfs).toHaveBeenCalledWith([
-      Buffer.from('text pdf content'),
-      Buffer.from('text pdf content'),
-      Buffer.from('text pdf content'),
-      Buffer.from('text pdf content'),
-    ]);
+    // Verify that the processing was done correctly
+    expect(performOcr).toHaveBeenCalledTimes(1);
+    expect(textToPdf).toHaveBeenCalledTimes(1);
   });
 
   test('should handle errors gracefully', async () => {
-    // Mock splitPdf to throw an error
-    (splitPdf as jest.Mock).mockRejectedValue(new Error('Failed to split PDF'));
+    // Mock performOcr to throw an error
+    (performOcr as jest.Mock).mockRejectedValue(new Error('OCR failed'));
 
     // Verify that the error is propagated
-    await expect(processPdf('input.pdf', 'output.pdf', 2)).rejects.toThrow('Failed to split PDF');
+    await expect(processPdf('input.pdf', 'output.pdf', 2)).rejects.toThrow('OCR failed');
   });
 
   test('should handle CLI with custom options', async () => {
@@ -144,20 +111,13 @@ describe('CLI', () => {
     // Reset the mocks to ensure clean state
     jest.clearAllMocks();
 
-    // Mock splitPdf to return only one page when max-pages is set to 1
-    (splitPdf as jest.Mock).mockResolvedValue([Buffer.from('page 1')]);
-
     // Process a PDF with max-pages set to 1
+    // Note: max-pages parameter is no longer used with direct PDF upload
     await processPdf('input.pdf', 'output.pdf', 2, 1);
 
-    // Verify that splitPdf was called with the max-pages parameter
-    expect(splitPdf).toHaveBeenCalledWith(expect.any(Buffer), 1);
-
-    // Verify that only one page was processed
-    expect(renderPdfToPng).toHaveBeenCalledTimes(1);
+    // Verify that the processing was done correctly
     expect(performOcr).toHaveBeenCalledTimes(1);
     expect(textToPdf).toHaveBeenCalledTimes(1);
-    expect(mergePdfs).toHaveBeenCalledWith([Buffer.from('text pdf content')]);
   });
 
   test('should pass OCR options to performOcr', async () => {

@@ -7,8 +7,20 @@ declare module '@mistralai/mistralai' {
 
     files: {
       upload(params: {
-        file: Blob | FormData | any;
+        file: {
+          fileName: string;
+          content: Buffer;
+        } | Blob | FormData | any;
+        purpose?: string;
       }): Promise<FileUploadResponse>;
+
+      retrieve(params: {
+        fileId: string;
+      }): Promise<FileUploadResponse>;
+
+      getSignedUrl(params: {
+        fileId: string;
+      }): Promise<SignedUrlResponse>;
     };
 
     ocr: {
@@ -38,5 +50,10 @@ declare module '@mistralai/mistralai' {
     // Add the actual properties based on the API documentation
     content?: string;
     text?: string;
+  }
+
+  interface SignedUrlResponse {
+    url: string;
+    expires_at: number;
   }
 }
