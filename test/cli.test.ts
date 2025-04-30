@@ -9,10 +9,19 @@ jest.mock('fs');
 jest.mock('path');
 jest.mock('../src/ocr');
 jest.mock('../src/textToPdf');
+jest.mock('../src/splitPdf');
+jest.mock('../src/mergePdfs');
+
+// Mock process.exit
+const mockExit = jest.spyOn(process, 'exit').mockImplementation((code) => {
+  throw new Error(`Process.exit called with code ${code}`);
+});
 
 // Import the mocked modules
 import { performOcr } from '../src/ocr';
 import { textToPdf } from '../src/textToPdf';
+import { splitPdf } from '../src/splitPdf';
+import { mergePdfs } from '../src/mergePdfs';
 
 describe('CLI', () => {
   // Reset all mocks before each test
@@ -27,8 +36,13 @@ describe('CLI', () => {
     (path.resolve as jest.Mock).mockImplementation((p) => p);
 
     // Mock the PDF processing functions
+    (splitPdf as jest.Mock).mockResolvedValue([
+      Buffer.from('page 1'),
+      Buffer.from('page 2'),
+    ]);
     (performOcr as jest.Mock).mockResolvedValue('OCR text result');
     (textToPdf as jest.Mock).mockResolvedValue(Buffer.from('text pdf content'));
+    (mergePdfs as jest.Mock).mockResolvedValue(Buffer.from('merged pdf content'));
   });
 
   test('should parse arguments correctly', () => {
@@ -48,24 +62,40 @@ describe('CLI', () => {
   });
 
   test('should execute the full pipeline when given valid arguments', async () => {
+    // Mock sleep to make tests run faster
+    jest.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
+      cb();
+      return 0 as any;
+    });
     // Process a PDF
     await processPdf('input.pdf', 'output.pdf', 2);
 
     // Verify each step was called with the correct arguments
     expect(fs.readFileSync).toHaveBeenCalledWith('input.pdf');
+    expect(splitPdf).toHaveBeenCalledWith(expect.any(Buffer), undefined);
     expect(performOcr).toHaveBeenCalledWith(expect.any(Buffer), undefined);
     expect(textToPdf).toHaveBeenCalledWith('OCR text result');
+    expect(mergePdfs).toHaveBeenCalledWith([
+      Buffer.from('text pdf content'),
+      Buffer.from('text pdf content'),
+    ]);
     expect(fs.writeFileSync).toHaveBeenCalledWith('output.pdf', expect.any(Buffer));
   });
 
   test('should handle concurrency parameter', async () => {
+    // Mock sleep to make tests run faster
+    jest.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
+      cb();
+      return 0 as any;
+    });
     // Process with concurrency of 2
     // Note: Concurrency parameter is no longer used with direct PDF upload
     await processPdf('input.pdf', 'output.pdf', 2);
 
     // Verify that the processing was done correctly
-    expect(performOcr).toHaveBeenCalledTimes(1);
-    expect(textToPdf).toHaveBeenCalledTimes(1);
+    // Note: With the new implementation, we process each page individually
+    expect(performOcr).toHaveBeenCalledTimes(2);
+    expect(textToPdf).toHaveBeenCalledTimes(2);
   });
 
   test('should handle errors gracefully', async () => {
@@ -108,19 +138,35 @@ describe('CLI', () => {
   });
 
   test('should handle max-pages parameter', async () => {
+    // Mock sleep to make tests run faster
+    jest.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
+      cb();
+      return 0 as any;
+    });
     // Reset the mocks to ensure clean state
     jest.clearAllMocks();
 
+    // Mock splitPdf to return only one page when max-pages is set to 1
+    (splitPdf as jest.Mock).mockResolvedValue([Buffer.from('page 1')]);
+
     // Process a PDF with max-pages set to 1
-    // Note: max-pages parameter is no longer used with direct PDF upload
     await processPdf('input.pdf', 'output.pdf', 2, 1);
 
-    // Verify that the processing was done correctly
+    // Verify that splitPdf was called with the max-pages parameter
+    expect(splitPdf).toHaveBeenCalledWith(expect.any(Buffer), 1);
+
+    // Verify that only one page was processed
     expect(performOcr).toHaveBeenCalledTimes(1);
     expect(textToPdf).toHaveBeenCalledTimes(1);
+    expect(mergePdfs).toHaveBeenCalledWith([Buffer.from('text pdf content')]);
   });
 
   test('should pass OCR options to performOcr', async () => {
+    // Mock sleep to make tests run faster
+    jest.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
+      cb();
+      return 0 as any;
+    });
     // Reset the mocks to ensure clean state
     jest.clearAllMocks();
 

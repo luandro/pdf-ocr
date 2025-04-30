@@ -37,6 +37,9 @@ npm start -- --input input.pdf --output output.pdf --concurrency 3 --max-pages 1
 
 # With OCR options for handling network issues
 npm start -- --input input.pdf --output output.pdf --retries 5 --timeout 60000 --retry-delay 2000 --verbose
+
+# Process one page at a time with a longer sleep between pages
+npm start -- --input input.pdf --output output.pdf --max-pages 10 --sleep 10000 --verbose
 ```
 
 Or if installed globally:
@@ -59,6 +62,7 @@ pdf-ocr --input input.pdf --output output.pdf
 - `--retries, -r`: Maximum number of OCR retry attempts (default: 3)
 - `--retry-delay, -d`: Delay between OCR retries in milliseconds (default: 1000)
 - `--timeout, -t`: Timeout for OCR API requests in milliseconds (default: 30000)
+- `--sleep, -s`: Time to sleep between processing pages in milliseconds (default: 5000)
 - `--verbose, -v`: Enable verbose logging for OCR process
 
 ## Development
@@ -93,10 +97,10 @@ The application is composed of several modules:
 The processing pipeline works as follows:
 
 1. The input PDF is split into individual pages.
-2. Each page is rendered as a PNG image.
-3. The PNG images are sent to Mistral API for OCR.
-4. The extracted text is converted back to PDF format.
-5. All the individual PDFs are merged into a single output PDF.
+2. Each page is processed one at a time with a configurable sleep between pages:
+   - The PDF page is sent directly to Mistral API for OCR.
+   - The extracted text is converted back to PDF format.
+3. All the individual PDFs are merged into a single output PDF.
 
 ## Requirements
 
@@ -115,10 +119,12 @@ The processing pipeline works as follows:
 - **Error: Invalid PDF**: The input file might be corrupted or password-protected.
 - **Slow processing**: Try increasing the concurrency parameter (`--concurrency`) to process more pages in parallel.
 - **Network errors during OCR**: If you encounter network errors like "socket connection was closed unexpectedly", try the following:
+  - Process one page at a time with a sleep between pages: `--sleep 10000` (10 seconds)
   - Increase the timeout with `--timeout 60000` (60 seconds)
   - Increase the number of retries with `--retries 5`
   - Increase the delay between retries with `--retry-delay 2000` (2 seconds)
   - Use the `--verbose` flag to see detailed logs of the OCR process
+  - Limit the number of pages processed at once with `--max-pages 5`
 
 ## License
 
