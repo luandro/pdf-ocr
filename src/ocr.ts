@@ -1,5 +1,9 @@
 import { Mistral } from '@mistralai/mistralai';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 // Load environment variables
 dotenv.config();
@@ -59,9 +63,6 @@ export async function performOcr(
     },
   });
 
-  // Convert image buffer to base64
-  const base64Image = imageBuffer.toString('base64');
-
   // Implement retry logic
   let lastError: Error | null = null;
 
@@ -71,24 +72,73 @@ export async function performOcr(
         console.log(`OCR attempt ${attempt}/${opts.maxRetries}...`);
       }
 
-      // Call Mistral OCR API
-      const result = await mistral.ocr.process({
-        model: 'Focus',
-        document: {
-          type: 'document_url',
-          documentUrl: `data:image/png;base64,${base64Image}`,
-        },
-      });
+      // Create a temporary file from the image buffer
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pdf-ocr-'));
+      const tempFilePath = path.join(tempDir, `image-${uuidv4()}.png`);
 
-      // Return the extracted text
-      // The text could be in either the 'content' or 'text' property depending on the API version
-      const extractedText = result.content || result.text || '';
+      try {
+        // Write the image buffer to a temporary file
+        fs.writeFileSync(tempFilePath, imageBuffer);
 
-      if (opts.verbose) {
-        console.log(`OCR successful on attempt ${attempt}`);
+        if (opts.verbose) {
+          console.log(`Created temporary file: ${tempFilePath}`);
+        }
+
+        // Create a blob from the file
+        const fileBlob = new Blob([fs.readFileSync(tempFilePath)], { type: 'image/png' });
+
+        // Upload the file to Mistral
+        if (opts.verbose) {
+          console.log('Uploading file to Mistral API...');
+        }
+
+        const uploadResponse = await mistral.files.upload({
+          file: fileBlob,
+        });
+
+        if (opts.verbose) {
+          console.log(`File uploaded successfully with ID: ${uploadResponse.id}`);
+        }
+
+        // Call Mistral OCR API with the file ID
+        if (opts.verbose) {
+          console.log('Processing OCR with uploaded file...');
+        }
+
+        const result = await mistral.ocr.process({
+          model: 'Focus',
+          document: {
+            type: 'file_id',
+            fileId: uploadResponse.id,
+          },
+        });
+
+        // Return the extracted text
+        // The text could be in either the 'content' or 'text' property depending on the API version
+        const extractedText = result.content || result.text || '';
+
+        if (opts.verbose) {
+          console.log(`OCR successful on attempt ${attempt}`);
+        }
+
+        return extractedText;
+      } finally {
+        // Clean up temporary files
+        try {
+          if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+          }
+          fs.rmdirSync(tempDir);
+
+          if (opts.verbose) {
+            console.log('Cleaned up temporary files');
+          }
+        } catch (cleanupError) {
+          if (opts.verbose) {
+            console.warn('Failed to clean up temporary files:', cleanupError);
+          }
+        }
       }
-
-      return extractedText;
     } catch (error) {
       lastError = error instanceof Error
         ? error

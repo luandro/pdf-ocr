@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { Mistral } from '@mistralai/mistralai';
 import { performOcr } from '../src/ocr';
 
@@ -49,27 +50,54 @@ describe('OCR Module', () => {
   });
 
   test('should call Mistral API with correct parameters', async () => {
-    // Mock implementation
+    // Mock file upload response
+    const mockFileUpload = jest.fn().mockResolvedValue({
+      id: 'test-file-id',
+      object: 'file',
+      bytes: 1000,
+      created_at: Date.now(),
+      filename: 'test.png',
+      purpose: 'ocr'
+    });
+
+    // Mock OCR process response
     const mockOcrProcess = jest.fn().mockResolvedValue({
       content: 'This is a sample text for OCR testing'
     });
 
     // Setup the mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      files: {
+        upload: mockFileUpload
+      },
       ocr: {
         process: mockOcrProcess
       }
     } as unknown as Mistral));
 
+    // Mock fs functions
+    jest.spyOn(fs, 'mkdtempSync').mockReturnValue('/tmp/test-dir');
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'readFileSync').mockReturnValue(Buffer.from('test'));
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'rmdirSync').mockImplementation(() => {});
+
+    // Mock Blob
+    global.Blob = jest.fn().mockImplementation(() => ({})) as any;
+
     // Call the function
     await performOcr(sampleImageBuffer);
 
-    // Verify the API was called with correct parameters
+    // Verify file upload was called
+    expect(mockFileUpload).toHaveBeenCalled();
+
+    // Verify OCR process was called with the correct file ID
     expect(mockOcrProcess).toHaveBeenCalledWith({
       model: 'Focus',
       document: expect.objectContaining({
-        type: 'document_url',
-        documentUrl: expect.stringContaining('data:image/png;base64,')
+        type: 'file_id',
+        fileId: 'test-file-id'
       })
     });
   });
@@ -77,17 +105,38 @@ describe('OCR Module', () => {
   test('should return extracted text from response', async () => {
     const expectedText = 'This is a sample text for OCR testing';
 
-    // Mock implementation
+    // Mock file upload response
+    const mockFileUpload = jest.fn().mockResolvedValue({
+      id: 'test-file-id',
+      object: 'file',
+      bytes: 1000,
+      created_at: Date.now(),
+      filename: 'test.png',
+      purpose: 'ocr'
+    });
+
+    // Mock OCR process response
     const mockOcrProcess = jest.fn().mockResolvedValue({
       content: expectedText
     });
 
     // Setup the mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      files: {
+        upload: mockFileUpload
+      },
       ocr: {
         process: mockOcrProcess
       }
     } as unknown as Mistral));
+
+    // Mock fs functions
+    jest.spyOn(fs, 'mkdtempSync').mockReturnValue('/tmp/test-dir');
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'readFileSync').mockReturnValue(Buffer.from('test'));
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'rmdirSync').mockImplementation(() => {});
 
     // Call the function
     const result = await performOcr(sampleImageBuffer);
@@ -97,15 +146,36 @@ describe('OCR Module', () => {
   });
 
   test('should handle API errors gracefully', async () => {
-    // Mock implementation that throws an error
+    // Mock file upload response
+    const mockFileUpload = jest.fn().mockResolvedValue({
+      id: 'test-file-id',
+      object: 'file',
+      bytes: 1000,
+      created_at: Date.now(),
+      filename: 'test.png',
+      purpose: 'ocr'
+    });
+
+    // Mock OCR process to throw an error
     const mockOcrProcess = jest.fn().mockRejectedValue(new Error('API Error'));
 
     // Setup the mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      files: {
+        upload: mockFileUpload
+      },
       ocr: {
         process: mockOcrProcess
       }
     } as unknown as Mistral));
+
+    // Mock fs functions
+    jest.spyOn(fs, 'mkdtempSync').mockReturnValue('/tmp/test-dir');
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'readFileSync').mockReturnValue(Buffer.from('test'));
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'rmdirSync').mockImplementation(() => {});
 
     // Call the function with only 1 retry to speed up the test
     await expect(performOcr(sampleImageBuffer, { maxRetries: 1, retryDelay: 10 }))
@@ -127,17 +197,38 @@ describe('OCR Module', () => {
   });
 
   test('should handle non-Error exceptions', async () => {
-    // Mock implementation that throws a non-Error value
+    // Mock file upload response
+    const mockFileUpload = jest.fn().mockResolvedValue({
+      id: 'test-file-id',
+      object: 'file',
+      bytes: 1000,
+      created_at: Date.now(),
+      filename: 'test.png',
+      purpose: 'ocr'
+    });
+
+    // Mock OCR process to throw a non-Error value
     const mockOcrProcess = jest.fn().mockImplementation(() => {
       throw 'Not an Error object';
     });
 
     // Setup the mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      files: {
+        upload: mockFileUpload
+      },
       ocr: {
         process: mockOcrProcess
       }
     } as unknown as Mistral));
+
+    // Mock fs functions
+    jest.spyOn(fs, 'mkdtempSync').mockReturnValue('/tmp/test-dir');
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'readFileSync').mockReturnValue(Buffer.from('test'));
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'rmdirSync').mockImplementation(() => {});
 
     // Call the function with only 1 retry to speed up the test
     await expect(performOcr(sampleImageBuffer, { maxRetries: 1, retryDelay: 10 }))
@@ -145,7 +236,17 @@ describe('OCR Module', () => {
   });
 
   test('should retry on failure and succeed eventually', async () => {
-    // Mock implementation that fails twice then succeeds
+    // Mock file upload response
+    const mockFileUpload = jest.fn().mockResolvedValue({
+      id: 'test-file-id',
+      object: 'file',
+      bytes: 1000,
+      created_at: Date.now(),
+      filename: 'test.png',
+      purpose: 'ocr'
+    });
+
+    // Mock OCR process to fail twice then succeed
     const mockOcrProcess = jest.fn()
       .mockRejectedValueOnce(new Error('First failure'))
       .mockRejectedValueOnce(new Error('Second failure'))
@@ -153,10 +254,21 @@ describe('OCR Module', () => {
 
     // Setup the mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      files: {
+        upload: mockFileUpload
+      },
       ocr: {
         process: mockOcrProcess
       }
     } as unknown as Mistral));
+
+    // Mock fs functions
+    jest.spyOn(fs, 'mkdtempSync').mockReturnValue('/tmp/test-dir');
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'readFileSync').mockReturnValue(Buffer.from('test'));
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'rmdirSync').mockImplementation(() => {});
 
     // Call the function with 3 retries
     const result = await performOcr(sampleImageBuffer, {
@@ -173,17 +285,38 @@ describe('OCR Module', () => {
   });
 
   test('should respect timeout option', async () => {
-    // Mock implementation
+    // Mock file upload response
+    const mockFileUpload = jest.fn().mockResolvedValue({
+      id: 'test-file-id',
+      object: 'file',
+      bytes: 1000,
+      created_at: Date.now(),
+      filename: 'test.png',
+      purpose: 'ocr'
+    });
+
+    // Mock OCR process response
     const mockOcrProcess = jest.fn().mockResolvedValue({
       content: 'Success with timeout'
     });
 
     // Setup the mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      files: {
+        upload: mockFileUpload
+      },
       ocr: {
         process: mockOcrProcess
       }
     } as unknown as Mistral));
+
+    // Mock fs functions
+    jest.spyOn(fs, 'mkdtempSync').mockReturnValue('/tmp/test-dir');
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'readFileSync').mockReturnValue(Buffer.from('test'));
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'rmdirSync').mockImplementation(() => {});
 
     // Call the function with custom timeout
     await performOcr(sampleImageBuffer, { timeout: 5000 });
