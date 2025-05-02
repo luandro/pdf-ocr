@@ -14,6 +14,12 @@ coverage/
 fixtures/*
 !fixtures/*.pdf
 
+# Test output files
+test/output/
+*.pdf
+*.txt
+!test/fixtures/*.pdf
+
 # Logs
 *.log
 npm-debug.log*

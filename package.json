@@ -8,6 +8,10 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:sample": "node test/scripts/test-sample.js",
+    "test:multi-page": "node test/scripts/test-multi-page.js",
+    "test:verify": "node test/scripts/verify-multi-page.js",
+    "test:all": "npm run test && npm run test:sample && npm run test:multi-page && npm run test:verify",
     "build": "tsc",
     "start": "node dist/cli.js",
     "dev": "ts-node src/cli.ts"

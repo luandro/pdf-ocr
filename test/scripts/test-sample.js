@@ -5,11 +5,17 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const inputFile = path.resolve(__dirname, 'sample.pdf');
-const outputFile = path.resolve(__dirname, 'sample-ocr.pdf');
+const inputFile = path.resolve(__dirname, '../fixtures/sample.pdf');
+const outputDir = path.resolve(__dirname, '../output');
+const outputFile = path.resolve(outputDir, 'sample-ocr.pdf');
 const maxPages = 3; // Process only the first 3 pages for testing
 const sleepTime = 10000; // 10 seconds between pages
 const verbose = true;
+
+// Create output directory if it doesn't exist
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+}
 
 // Verify the input file exists
 if (!fs.existsSync(inputFile)) {
@@ -52,7 +58,7 @@ try {
 
     // Extract text from the OCR PDF using uvx
     console.log('\nExtracting text from OCR PDF using uvx...');
-    const ocrTextFile = path.resolve(__dirname, 'ocr.txt');
+    const ocrTextFile = path.resolve(outputDir, 'ocr.txt');
     try {
       execSync(`uvx --with numpy pdftext --out_path ${ocrTextFile} ${outputFile}`, { stdio: 'inherit' });
 

@@ -6,13 +6,19 @@ const path = require('path');
 const { PDFDocument } = require('pdf-lib');
 
 // Configuration
-const inputFile = path.resolve(__dirname, 'sample.pdf');
-const outputFile = path.resolve(__dirname, 'multi-page-ocr.pdf');
-const multiPageFile = path.resolve(__dirname, 'multi-page.pdf');
+const inputFile = path.resolve(__dirname, '../fixtures/sample.pdf');
+const outputDir = path.resolve(__dirname, '../output');
+const outputFile = path.resolve(outputDir, 'multi-page-ocr.pdf');
+const multiPageFile = path.resolve(outputDir, 'multi-page.pdf');
 const numPages = 3; // Create a PDF with 3 pages
 const maxPages = 3; // Process all pages
 const sleepTime = 5000; // 5 seconds between pages
 const verbose = true;
+
+// Create output directory if it doesn't exist
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+}
 
 // Create a multi-page PDF from the sample PDF
 async function createMultiPagePdf() {

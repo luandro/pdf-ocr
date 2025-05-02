@@ -5,8 +5,14 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const inputFile = path.resolve(__dirname, 'multi-page-ocr.pdf');
-const outputFile = path.resolve(__dirname, 'multi-page-ocr.txt');
+const outputDir = path.resolve(__dirname, '../output');
+const inputFile = path.resolve(outputDir, 'multi-page-ocr.pdf');
+const outputFile = path.resolve(outputDir, 'multi-page-ocr.txt');
+
+// Create output directory if it doesn't exist
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+}
 
 // Verify the input file exists
 if (!fs.existsSync(inputFile)) {
@@ -20,7 +26,7 @@ try {
   // Extract text from the OCR PDF using uvx
   console.log('\nExtracting text using uvx...');
   execSync(`uvx --with numpy pdftext --out_path ${outputFile} ${inputFile}`, { stdio: 'inherit' });
-  
+
   // Read the extracted text
   if (fs.existsSync(outputFile)) {
     const ocrText = fs.readFileSync(outputFile, 'utf8');
@@ -28,7 +34,7 @@ try {
     console.log('-------------------');
     console.log(ocrText.substring(0, 500) + '...');
     console.log('-------------------');
-    
+
     if (ocrText.trim().length === 0) {
       console.warn('Warning: The OCR PDF appears to be blank or contains no extractable text.');
     } else {
