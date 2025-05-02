@@ -32,23 +32,51 @@ console.log(`Sleep time: ${sleepTime}ms`);
 try {
   // Build the command
   const command = `node dist/cli.js --input "${inputFile}" --output "${outputFile}" --max-pages ${maxPages} --sleep ${sleepTime} ${verbose ? '--verbose' : ''}`;
-  
+
   console.log(`\nExecuting command: ${command}\n`);
-  
+
   // Execute the command
   const startTime = Date.now();
   execSync(command, { stdio: 'inherit' });
   const endTime = Date.now();
-  
+
   // Calculate execution time
   const executionTime = (endTime - startTime) / 1000;
-  
+
   console.log(`\nOCR process completed in ${executionTime.toFixed(2)} seconds`);
-  
+
   // Verify the output file exists
   if (fs.existsSync(outputFile)) {
     const stats = fs.statSync(outputFile);
     console.log(`Output file size: ${(stats.size / 1024).toFixed(2)} KB`);
+
+    // Extract text from the OCR PDF using uvx
+    console.log('\nExtracting text from OCR PDF using uvx...');
+    const ocrTextFile = path.resolve(__dirname, 'ocr.txt');
+    try {
+      execSync(`uvx --with numpy pdftext --out_path ${ocrTextFile} ${outputFile}`, { stdio: 'inherit' });
+
+      // Read the extracted text
+      if (fs.existsSync(ocrTextFile)) {
+        const ocrText = fs.readFileSync(ocrTextFile, 'utf8');
+        console.log('\nExtracted OCR text:');
+        console.log('-------------------');
+        console.log(ocrText || '(No text extracted)');
+        console.log('-------------------');
+
+        if (ocrText.trim().length === 0) {
+          console.warn('Warning: The OCR PDF appears to be blank or contains no extractable text.');
+        } else {
+          console.log('OCR text extraction successful!');
+        }
+      } else {
+        console.warn('Warning: OCR text file was not created by uvx command.');
+      }
+    } catch (uvxError) {
+      console.warn('Warning: Failed to extract text using uvx command:');
+      console.warn(uvxError.message);
+    }
+
     console.log('Test completed successfully!');
   } else {
     console.error('Output file was not created!');

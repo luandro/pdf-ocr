@@ -48,7 +48,6 @@ export async function processPdf(
     for (let i = 0; i < pdfPages.length; i++) {
       if (ocrOptions?.verbose) {
         console.log(`Processing page ${i + 1}/${pdfPages.length}...`);
-        console.log('----------------------------------------', pdfPages[i]);
       }
 
       try {

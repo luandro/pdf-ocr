@@ -19,6 +19,48 @@ export interface OcrOptions {
 }
 
 /**
+ * OCR page result
+ */
+interface OcrPage {
+  /** Page index */
+  index: number;
+  /** Markdown text extracted from the page */
+  markdown?: string;
+  /** Images extracted from the page */
+  images?: any[];
+  /** Page dimensions */
+  dimensions?: {
+    /** DPI of the page */
+    dpi: number;
+    /** Height of the page in pixels */
+    height: number;
+    /** Width of the page in pixels */
+    width: number;
+  };
+}
+
+/**
+ * OCR response from Mistral API
+ */
+interface OcrResponse {
+  /** Pages processed by OCR */
+  pages?: OcrPage[];
+  /** Model used for OCR */
+  model?: string;
+  /** Usage information */
+  usageInfo?: {
+    /** Number of pages processed */
+    pagesProcessed: number;
+    /** Size of the document in bytes */
+    docSizeBytes: number;
+  };
+  /** Legacy content field */
+  content?: string;
+  /** Legacy text field */
+  text?: string;
+}
+
+/**
  * Sleep for a specified number of milliseconds
  * @param ms - Milliseconds to sleep
  */
@@ -76,13 +118,32 @@ export async function performOcr(
           type: 'document_url',
           documentUrl: `data:application/pdf;base64,${base64Pdf}`,
         },
-      });
+      }) as unknown as OcrResponse;
 
-      // Return the extracted text
-      const extractedText = result.content || result.text || '';
+      // Extract text from the result
+      let extractedText = '';
+
+      // Check if the result has pages with markdown content
+      if (result.pages && Array.isArray(result.pages)) {
+        // Concatenate markdown from all pages
+        extractedText = result.pages
+          .map(page => page.markdown || '')
+          .filter(text => text.length > 0)
+          .join('\n\n');
+      } else {
+        // Fallback to content or text fields
+        extractedText = result.content || result.text || '';
+      }
 
       if (opts.verbose) {
         console.log(`OCR successful on attempt ${attempt}`);
+        console.log('OCR result structure:', JSON.stringify(result, null, 2));
+        console.log('Extracted text length:', extractedText.length);
+        if (extractedText.length > 0) {
+          console.log('First 200 characters of extracted text:', extractedText.substring(0, 200));
+        } else {
+          console.log('No text was extracted from the PDF');
+        }
       }
 
       return extractedText;
