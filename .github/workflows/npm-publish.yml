@@ -18,6 +18,8 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
+      - name: Install GraphicsMagick and ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y graphicsmagick imagemagick
       - run: npm i
       - run: npm test
 
@@ -30,6 +32,8 @@ jobs:
         with:
           node-version: '18'
           registry-url: 'https://registry.npmjs.org'
+      - name: Install GraphicsMagick and ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y graphicsmagick imagemagick
       - run: npm i
       - run: npm run build
       - run: npm publish
