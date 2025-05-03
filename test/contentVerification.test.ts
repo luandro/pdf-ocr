@@ -24,8 +24,9 @@ jest.mock('together-ai', () => {
 });
 
 // Create a mock for the createPrompt function
-const createPrompt = jest.fn().mockImplementation((text: string) => {
-  return `
+const createPrompt = jest.fn().mockImplementation((text: string, previousPageText?: string) => {
+  // Base prompt
+  let prompt = `
 I have some text that was extracted from a PDF using OCR. The OCR process may have introduced errors, such as:
 - Misrecognized characters
 - Broken words
@@ -35,12 +36,31 @@ I have some text that was extracted from a PDF using OCR. The OCR process may ha
 
 Please fix any errors you find in the text while preserving the original meaning and structure. If you encounter text that seems completely nonsensical, try to make a reasonable guess based on context, but don't invent new content.
 
-Here is the OCR text:
+IMPORTANT: Maintain the original capitalization, formatting, and paragraph structure as much as possible. Pay special attention to proper nouns, acronyms, and technical terms.
+
+CRITICAL INSTRUCTION: If the input appears to be empty or contains only image references, metadata, or statements like "There is no text to correct" without actual text content, return an empty string without any commentary. Do not return messages about the content being an image or empty - just return an empty string.
+`;
+
+  // Add previous page context if available
+  if (previousPageText && previousPageText.trim().length > 0) {
+    prompt += `
+For additional context, here is the text from the previous page:
+
+${previousPageText}
+
+`;
+  }
+
+  // Add the current page text
+  prompt += `
+Here is the OCR text to correct:
 
 ${text}
 
 Please provide the corrected version of the text.
 `;
+
+  return prompt;
 });
 
 describe('Content Verification Module', () => {
@@ -224,6 +244,135 @@ describe('Content Verification Module', () => {
       // Verify that the original text is returned when API returns empty response
       expect(result).toBe(sampleOcrText);
     });
+
+    test('should use previous page text as context when provided', async () => {
+      // Sample previous page text
+      const previousPageText = 'This is text from the previous page. It provides context for the current page.';
+
+      // Mock the create method to return the expected text
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: expectedCorrectedText
+            }
+          }
+        ]
+      });
+
+      // Call the function with previous page text
+      await verifyContent(sampleOcrText, { verbose: true }, previousPageText);
+
+      // Verify that the create method was called with a prompt containing the previous page text
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'user',
+            content: expect.stringContaining(previousPageText)
+          })
+        ])
+      }));
+    });
+
+    test('should handle metadata-only content and return empty string', async () => {
+      // Sample text with only metadata or image reference
+      const metadataText = 'There is no text to correct. The provided content is an image reference and does not contain any OCR-generated text that needs correction.';
+
+      // Mock the create method to return the metadata text (simulating LLM not following instructions)
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: metadataText
+            }
+          }
+        ]
+      });
+
+      // Call the function
+      const result = await verifyContent(metadataText, { verbose: true });
+
+      // Verify that an empty string is returned
+      expect(result).toBe('');
+    });
+
+    test('should handle various forms of metadata-only content', async () => {
+      // Different variations of metadata-only content
+      const metadataVariations = [
+        'There is no text to correct.',
+        'The page is empty and does not contain any text.',
+        'This is an image reference without any actual text content.',
+        'No text to correct in this image.',
+        'The provided content is an image reference.'
+      ];
+
+      for (const metadataText of metadataVariations) {
+        // Mock the create method to return the metadata text
+        mockCreate.mockResolvedValue({
+          choices: [
+            {
+              message: {
+                content: metadataText
+              }
+            }
+          ]
+        });
+
+        // Call the function
+        const result = await verifyContent(metadataText);
+
+        // Verify that an empty string is returned
+        expect(result).toBe('');
+      }
+    });
+
+    test('should filter out markdown image references', async () => {
+      // Sample text with markdown image references
+      const textWithImages = 'Some text before the image.\n\n![img-0.jpeg](img-0.jpeg)\n\nSome text after the image.';
+
+      // Mock the create method to return text with image references
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: textWithImages
+            }
+          }
+        ]
+      });
+
+      // Call the function
+      const result = await verifyContent('Original text', { verbose: true });
+
+      // Verify that the image references are removed
+      expect(result).not.toContain('![img-0.jpeg](img-0.jpeg)');
+
+      // Verify that the text content is preserved
+      expect(result).toContain('Some text before the image.');
+      expect(result).toContain('Some text after the image.');
+    });
+
+    test('should return empty string when only markdown image references are present', async () => {
+      // Sample text with only markdown image references
+      const onlyImageReferences = '![img-0.jpeg](img-0.jpeg)\n\n![img-1.jpeg](img-1.jpeg)';
+
+      // Mock the create method to return only image references
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: onlyImageReferences
+            }
+          }
+        ]
+      });
+
+      // Call the function
+      const result = await verifyContent('Original text', { verbose: true });
+
+      // Verify that an empty string is returned
+      expect(result).toBe('');
+    });
   });
 
   describe('createPrompt function', () => {
@@ -238,6 +387,12 @@ describe('Content Verification Module', () => {
       expect(prompt).toContain('I have some text that was extracted from a PDF using OCR');
       expect(prompt).toContain('Please fix any errors you find in the text');
       expect(prompt).toContain('Please provide the corrected version of the text');
+      expect(prompt).toContain('Maintain the original capitalization');
+
+      // Verify that the prompt contains instructions for handling empty content
+      expect(prompt).toContain('CRITICAL INSTRUCTION');
+      expect(prompt).toContain('If the input appears to be empty or contains only image references');
+      expect(prompt).toContain('return an empty string without any commentary');
     });
 
     test('should handle empty text', () => {
@@ -250,8 +405,31 @@ describe('Content Verification Module', () => {
       expect(prompt).toContain('Please provide the corrected version of the text');
 
       // Verify that the prompt contains empty text
-      expect(prompt).toContain('Here is the OCR text:');
+      expect(prompt).toContain('Here is the OCR text to correct:');
       expect(prompt).toContain('');
+    });
+
+    test('should include previous page text when provided', () => {
+      // Sample previous page text
+      const previousPageText = 'This is text from the previous page. It provides context for the current page.';
+
+      // Call the function with previous page text
+      const prompt = createPrompt(sampleOcrText, previousPageText);
+
+      // Verify that the prompt contains both the current text and previous page text
+      expect(prompt).toContain(sampleOcrText);
+      expect(prompt).toContain(previousPageText);
+
+      // Verify that the prompt contains the context section
+      expect(prompt).toContain('For additional context, here is the text from the previous page:');
+    });
+
+    test('should not include previous page section when previous page text is empty', () => {
+      // Call the function with empty previous page text
+      const prompt = createPrompt(sampleOcrText, '');
+
+      // Verify that the prompt does not contain the context section
+      expect(prompt).not.toContain('For additional context, here is the text from the previous page:');
     });
   });
 });
