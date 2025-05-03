@@ -198,8 +198,8 @@ describe('Content Verification Module', () => {
       await verifyContent(sampleOcrText, { verbose: true });
 
       // Verify that console.log was called with the expected messages
-      expect(consoleLogSpy).toHaveBeenCalledWith('Verifying OCR text with DeepSeek LLM...');
-      expect(consoleLogSpy).toHaveBeenCalledWith('Sending prompt to DeepSeek LLM...');
+      expect(consoleLogSpy).toHaveBeenCalledWith('Verifying OCR text with Together.ai free LLM...');
+      expect(consoleLogSpy).toHaveBeenCalledWith('Sending prompt to Together.ai free LLM...');
       expect(consoleLogSpy).toHaveBeenCalledWith('Content verification complete');
 
       // Restore console.log

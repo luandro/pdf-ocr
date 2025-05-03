@@ -1,6 +1,6 @@
 {
-  "name": "pdf-ocr-cli",
-  "version": "1.0.0",
+  "name": "pdf-ocr",
+  "version": "1.0.1",
   "description": "A CLI tool for OCR processing of PDF files using Mistral API with optional LLM verification",
   "main": "dist/cli.js",
   "bin": {
@@ -26,19 +26,19 @@
     "ai",
     "text-extraction",
     "pdf-processing",
-    "deepseek",
+    "togetherai",
     "llm"
   ],
-  "author": "Your Name <your.email@example.com>",
+  "author": "Luandro <luandro@gmail.com>",
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/pdf-ocr-cli.git"
+    "url": "git+https://github.com/luandro/pdf-ocr.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/pdf-ocr-cli/issues"
+    "url": "https://github.com/luandro/pdf-ocr/issues"
   },
-  "homepage": "https://github.com/yourusername/pdf-ocr-cli#readme",
+  "homepage": "https://github.com/luandro/pdf-ocr#readme",
   "dependencies": {
     "@mistralai/mistralai": "^1.6.0",
     "@web-std/file": "^3.0.3",

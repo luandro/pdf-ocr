@@ -27,7 +27,7 @@ export interface ContentVerificationOptions {
 }
 
 /**
- * Verifies and improves OCR text using DeepSeek LLM
+ * Verifies and improves OCR text using Together.ai free LLM
  * @param text - The OCR text to verify and improve
  * @param options - Content verification options
  * @returns Improved text
@@ -66,17 +66,17 @@ export async function verifyContent(
     });
 
     if (opts.verbose) {
-      console.log('Verifying OCR text with DeepSeek LLM...');
+      console.log('Verifying OCR text with Together.ai free LLM...');
     }
 
     // Create the prompt for the LLM
     const prompt = createPrompt(text);
 
     if (opts.verbose) {
-      console.log('Sending prompt to DeepSeek LLM...');
+      console.log('Sending prompt to Together.ai free LLM...');
     }
 
-    // Call the DeepSeek model
+    // Call the Together.ai free model
     const response = await together.chat.completions.create({
       model: VERIFICATION_MODEL,
       messages: [
