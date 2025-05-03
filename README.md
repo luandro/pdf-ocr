@@ -16,6 +16,10 @@ A powerful TypeScript CLI tool that transforms scanned PDFs into searchable docu
 
 Perfect for digitizing paper documents, making image-based PDFs searchable, and extracting text from scanned materials.
 
+Here are example results:
+
+![example ocr](./results.jpg)
+
 ## Quick Start
 
 ### Prerequisites
