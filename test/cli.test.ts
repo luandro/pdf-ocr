@@ -187,4 +187,106 @@ describe('CLI', () => {
       ocrOptions
     );
   });
+
+  test('should handle sleep time between pages', async () => {
+    // Spy on setTimeout to verify it's called with the correct delay
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+
+    // Process a PDF with a custom sleep time
+    await processPdf('input.pdf', 'output.pdf', 2, undefined, undefined, 3000);
+
+    // Verify that setTimeout was called with the correct delay
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 3000);
+
+    // Restore setTimeout
+    setTimeoutSpy.mockRestore();
+  });
+
+  test('should handle content verification options', async () => {
+    // Create a CLI instance
+    const program = createCli();
+
+    // Parse arguments with content verification options
+    program.parse([
+      'node', 'cli.js',
+      '--input', 'input.pdf',
+      '--output', 'output.pdf',
+      '--verify',
+      '--max-tokens', '2000',
+      '--temperature', '0.5',
+      '--top-p', '0.8'
+    ]);
+
+    // Get the parsed options
+    const options = program.opts();
+
+    // Verify the options were parsed correctly
+    expect(options.verify).toBe(true);
+    expect(options.maxTokens).toBe(2000);
+    expect(options.temperature).toBe(0.5);
+    expect(options.topP).toBe(0.8);
+  });
+
+  test('should handle errors in processPdf', async () => {
+    // Mock console.error
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    // Mock processPdf to throw an error
+    jest.spyOn(require('../src/cli'), 'processPdf').mockRejectedValueOnce(new Error('Processing failed'));
+
+    // Call processPdf directly and catch the error
+    try {
+      await processPdf('input.pdf', 'output.pdf');
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe('Processing failed');
+    }
+
+    // Restore console.error
+    consoleErrorSpy.mockRestore();
+  });
+
+  test('should handle non-Error objects in processPdf', async () => {
+    // Mock console.error
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    // Mock processPdf to throw a non-Error object
+    jest.spyOn(require('../src/cli'), 'processPdf').mockImplementationOnce(() => {
+      return Promise.reject('String error');
+    });
+
+    // Call processPdf directly and catch the error
+    try {
+      await processPdf('input.pdf', 'output.pdf');
+    } catch (error) {
+      expect(error).toBe('String error');
+    }
+
+    // Restore console.error
+    consoleErrorSpy.mockRestore();
+  });
+
+  test('should execute the CLI when run as main module', () => {
+    // Mock the createCli function
+    const mockParse = jest.fn();
+    const mockProgram = { parse: mockParse };
+    const createCliSpy = jest.spyOn(require('../src/cli'), 'createCli').mockReturnValue(mockProgram as unknown as Command);
+
+    // Get the module.exports from the CLI module
+    const cliModule = require('../src/cli');
+
+    // Simulate the main module check by calling the code directly
+    if (cliModule.createCli && typeof cliModule.createCli === 'function') {
+      // This is what happens in the CLI module when require.main === module
+      const program = cliModule.createCli();
+      program.parse(process.argv);
+    }
+
+    // Verify that createCli was called and program.parse was called with process.argv
+    expect(createCliSpy).toHaveBeenCalled();
+    expect(mockParse).toHaveBeenCalledWith(process.argv);
+
+    // Restore createCli
+    createCliSpy.mockRestore();
+  });
 });

@@ -1,5 +1,9 @@
 # PDF-OCR CLI Tool
 
+[![Test Coverage](https://github.com/yourusername/pdf-ocr-cli/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/yourusername/pdf-ocr-cli/actions/workflows/npm-publish.yml)
+[![npm version](https://badge.fury.io/js/pdf-ocr-cli.svg)](https://badge.fury.io/js/pdf-ocr-cli)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
+
 A TypeScript CLI application that:
 - Takes a PDF file input
 - Splits it into individual pages
@@ -93,7 +97,7 @@ pdf-ocr --input input.pdf --output output.pdf
 This project follows Test-Driven Development principles:
 
 ```bash
-# Run tests
+# Run tests with coverage
 npm test
 
 # Run tests in watch mode
@@ -106,12 +110,31 @@ npm run build
 npm run dev -- --input input.pdf --output output.pdf
 ```
 
+### Test Coverage
+
+This project maintains high test coverage to ensure code quality:
+
+- All tests are located in the `test/` directory
+- Coverage reports are generated in the `coverage/` directory
+- Coverage thresholds are set to 80% for branches, functions, lines, and statements
+
+To view the coverage report:
+
+```bash
+# Run tests with coverage
+npm test
+
+# Open the HTML coverage report
+open coverage/lcov-report/index.html
+```
+
 ### Continuous Integration
 
 This project uses GitHub Actions for continuous integration and automatic publishing to npm:
 
-- Every push to the main branch triggers the test suite
-- If tests pass, the package is automatically published to npm
+- Every push to the main branch triggers the test suite with coverage checks
+- Coverage reports are uploaded as artifacts for each build
+- If tests pass and coverage meets thresholds, the package is automatically published to npm
 - To set up automatic publishing, add your NPM_TOKEN as a secret in your GitHub repository settings
 
 The workflow configuration is located in `.github/workflows/npm-publish.yml`.

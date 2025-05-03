@@ -21,7 +21,31 @@ jobs:
       - name: Install GraphicsMagick and ImageMagick
         run: sudo apt-get update && sudo apt-get install -y graphicsmagick imagemagick
       - run: npm i
-      - run: npm test
+      - name: Run tests with coverage
+        run: npm test
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+      - name: Check coverage thresholds
+        run: |
+          COVERAGE_SUMMARY=$(cat coverage/coverage-summary.json)
+          BRANCHES=$(echo $COVERAGE_SUMMARY | jq '.total.branches.pct')
+          FUNCTIONS=$(echo $COVERAGE_SUMMARY | jq '.total.functions.pct')
+          LINES=$(echo $COVERAGE_SUMMARY | jq '.total.lines.pct')
+          STATEMENTS=$(echo $COVERAGE_SUMMARY | jq '.total.statements.pct')
+
+          echo "Coverage Summary:"
+          echo "Branches: $BRANCHES%"
+          echo "Functions: $FUNCTIONS%"
+          echo "Lines: $LINES%"
+          echo "Statements: $STATEMENTS%"
+
+          if (( $(echo "$BRANCHES < 80" | bc -l) )) || (( $(echo "$FUNCTIONS < 80" | bc -l) )) || (( $(echo "$LINES < 80" | bc -l) )) || (( $(echo "$STATEMENTS < 80" | bc -l) )); then
+            echo "Coverage is below thresholds"
+            exit 1
+          fi
 
   publish:
     needs: test

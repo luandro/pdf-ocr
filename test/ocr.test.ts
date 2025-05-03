@@ -6,6 +6,14 @@ import { performOcr } from '../src/ocr';
 // Mock the Mistral client
 jest.mock('@mistralai/mistralai');
 
+// Mock the content verification module
+jest.mock('../src/contentVerification', () => ({
+  verifyContent: jest.fn().mockImplementation(async (text) => {
+    // Return a modified version of the input text to verify it was called
+    return `Verified: ${text}`;
+  })
+}));
+
 describe('OCR Module', () => {
   const samplePdfPath = path.join(__dirname, '../fixtures/sample.pdf');
   let samplePdfBuffer: Buffer;
@@ -237,5 +245,117 @@ describe('OCR Module', () => {
     expect(Mistral).toHaveBeenCalledWith(expect.objectContaining({
       apiKey: 'test-api-key'
     }));
+  });
+
+  test('should use content verification when enabled', async () => {
+    const originalText = 'Text to be verified';
+
+    // Mock OCR process response
+    const mockOcrProcess = jest.fn().mockResolvedValue({
+      content: originalText
+    });
+
+    // Setup the Mistral mock
+    (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      ocr: {
+        process: mockOcrProcess
+      }
+    } as unknown as Mistral));
+
+    // Import the mocked verifyContent function
+    const { verifyContent } = require('../src/contentVerification');
+
+    // Call the function with content verification enabled
+    const result = await performOcr(samplePdfBuffer, {
+      verifyContent: true,
+      verbose: true
+    });
+
+    // Verify that verifyContent was called with the original text
+    expect(verifyContent).toHaveBeenCalledWith(originalText, expect.objectContaining({
+      verbose: true
+    }));
+
+    // Verify the result includes the verification prefix
+    expect(result).toBe(`Verified: ${originalText}`);
+  });
+
+  test('should handle content verification errors gracefully', async () => {
+    const originalText = 'Text that will cause verification to fail';
+
+    // Mock OCR process response
+    const mockOcrProcess = jest.fn().mockResolvedValue({
+      content: originalText
+    });
+
+    // Setup the Mistral mock
+    (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      ocr: {
+        process: mockOcrProcess
+      }
+    } as unknown as Mistral));
+
+    // Import the mocked verifyContent function and make it throw an error
+    const { verifyContent } = require('../src/contentVerification');
+    verifyContent.mockRejectedValueOnce(new Error('Verification failed'));
+
+    // Call the function with content verification enabled
+    const result = await performOcr(samplePdfBuffer, {
+      verifyContent: true,
+      verbose: true
+    });
+
+    // Verify that verifyContent was called
+    expect(verifyContent).toHaveBeenCalled();
+
+    // Verify the result is the original text (fallback when verification fails)
+    expect(result).toBe(originalText);
+  });
+
+  test('should handle the case when all retries are exhausted', async () => {
+    // Mock OCR process to fail all attempts
+    const mockOcrProcess = jest.fn()
+      .mockRejectedValue(new Error('Persistent failure'));
+
+    // Setup the Mistral mock
+    (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      ocr: {
+        process: mockOcrProcess
+      }
+    } as unknown as Mistral));
+
+    // Call the function with 3 retries
+    await expect(performOcr(samplePdfBuffer, {
+      maxRetries: 3,
+      retryDelay: 10,
+      verbose: true
+    })).rejects.toThrow('OCR failed after 3 attempts: Persistent failure');
+
+    // Verify that the API was called exactly 3 times
+    expect(mockOcrProcess).toHaveBeenCalledTimes(3);
+  });
+
+  test('should handle the case when lastError is null', async () => {
+    // This is an edge case that should never happen in practice,
+    // but we need to test it for coverage
+
+    // Mock OCR process with a custom implementation that doesn't set lastError
+    const mockOcrProcess = jest.fn().mockImplementation(() => {
+      // This will cause the catch block to execute but not set lastError
+      throw null;
+    });
+
+    // Setup the Mistral mock
+    (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      ocr: {
+        process: mockOcrProcess
+      }
+    } as unknown as Mistral));
+
+    // Call the function with 1 retry
+    await expect(performOcr(samplePdfBuffer, {
+      maxRetries: 1,
+      retryDelay: 10
+    })).rejects.toThrow('OCR failed after 1 attempts: Unknown error');
   });
 });
