@@ -1,18 +1,9 @@
 import dotenv from 'dotenv';
-import Together from 'together-ai';
+import { Together } from 'together-ai';
 import { VERIFICATION_MODEL, VERIFICATION_SYSTEM_PROMPT } from './constants';
 
 // Load environment variables
 dotenv.config();
-
-// Define the Together type for TypeScript
-// interface Together {
-//   chat: {
-//     completions: {
-//       create(request: any): Promise<any>;
-//     };
-//   };
-// }
 
 // Define the Together constructor type
 interface TogetherConstructor {
@@ -68,27 +59,16 @@ export async function verifyContent(
     return '';
   }
 
-  // Dynamically import the Together.ai library
-  // let Together: TogetherConstructor;
-  // try {
-  //   // Try to import the Together.ai library
-  //   const togetherModule = await import('together-typescript');
-  //   Together = togetherModule.Together;
-  // } catch (error) {
-  //   // If the library is not installed, throw an error
-  //   throw new Error('The together-typescript library is not installed. Please install it with: npm install togethercomputer/together-typescript');
-  // }
-
-  // Initialize Together client
-  const together = new Together({
-    apiKey: process.env.TOGETHER_API_KEY,
-  });
-
-  if (opts.verbose) {
-    console.log('Verifying OCR text with DeepSeek LLM...');
-  }
-
   try {
+    // Initialize Together client
+    const together = new Together({
+      apiKey: process.env.TOGETHER_API_KEY,
+    });
+
+    if (opts.verbose) {
+      console.log('Verifying OCR text with DeepSeek LLM...');
+    }
+
     // Create the prompt for the LLM
     const prompt = createPrompt(text);
 
