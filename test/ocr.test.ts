@@ -149,6 +149,48 @@ describe('OCR Module', () => {
     expect(result).toBe('');
   });
 
+  test('should filter out markdown image references', async () => {
+    // Mock OCR process response with markdown image references
+    const mockOcrProcess = jest.fn().mockResolvedValue({
+      pages: [
+        {
+          index: 0,
+          markdown: 'Some text\n\n![img-0.jpeg](img-0.jpeg)\n\nMore text'
+        },
+        {
+          index: 1,
+          markdown: '![img-1.jpeg](img-1.jpeg)\n\nOnly text after image'
+        },
+        {
+          index: 2,
+          markdown: 'Text before image\n\n![img-2.jpeg](img-2.jpeg)'
+        }
+      ],
+      model: 'mistral-ocr-latest'
+    });
+
+    // Setup the Mistral mock
+    (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      ocr: {
+        process: mockOcrProcess
+      }
+    } as unknown as Mistral));
+
+    // Call the function
+    const result = await performOcr(samplePdfBuffer, { verbose: true });
+
+    // Verify the result has image references removed
+    expect(result).not.toContain('![img-0.jpeg](img-0.jpeg)');
+    expect(result).not.toContain('![img-1.jpeg](img-1.jpeg)');
+    expect(result).not.toContain('![img-2.jpeg](img-2.jpeg)');
+
+    // Verify the text content is preserved
+    expect(result).toContain('Some text');
+    expect(result).toContain('More text');
+    expect(result).toContain('Only text after image');
+    expect(result).toContain('Text before image');
+  });
+
   test('should handle API errors gracefully', async () => {
     // Mock OCR process to throw an error
     const mockOcrProcess = jest.fn().mockRejectedValue(new Error('API Error'));
