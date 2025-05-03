@@ -1,5 +1,5 @@
 {
-  "name": "pdf-ocr",
+  "name": "pdf-ocr-cli",
   "version": "1.0.1",
   "description": "A CLI tool for OCR processing of PDF files using Mistral API with optional LLM verification",
   "main": "dist/cli.js",
