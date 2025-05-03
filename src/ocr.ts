@@ -23,6 +23,8 @@ export interface OcrOptions {
   verifyContent?: boolean;
   /** Options for content verification */
   contentVerificationOptions?: ContentVerificationOptions;
+  /** Text from the previous page to provide context for content verification */
+  previousPageText?: string;
 }
 
 /**
@@ -155,7 +157,32 @@ export async function performOcr(
         }
       }
 
-      // Verify and improve the extracted text if enabled
+      // Filter out markdown image references
+      extractedText = extractedText.replace(/!\[.*?\]\(.*?\)/g, '');
+
+      // Clean up any empty lines created by removing image references
+      extractedText = extractedText.replace(/\n\s*\n/g, '\n\n').trim();
+
+      if (opts.verbose && extractedText.length > 0) {
+        console.log('After filtering image references, text length:', extractedText.length);
+        console.log('First 200 characters after filtering:', extractedText.substring(0, 200));
+      }
+
+      // Check if the extracted text is meaningful before verification
+      const hasOnlyMetadata = (extractedText.includes("image") &&
+                             (extractedText.includes("reference") ||
+                              extractedText.includes("metadata") ||
+                              extractedText.includes("no text"))) ||
+                              /!\[.*?\]\(.*?\)/.test(extractedText);
+
+      // If the text contains only metadata and verification is enabled, log this information
+      if (opts.verifyContent && hasOnlyMetadata && opts.verbose) {
+        console.log('Skipping content verification for metadata-only or empty content');
+        // Return empty string for metadata-only content
+        return "";
+      }
+
+      // Verify and improve the extracted text if enabled and the text is meaningful
       if (opts.verifyContent && extractedText.length > 0) {
         if (opts.verbose) {
           console.log('Verifying and improving OCR text...');
@@ -171,8 +198,8 @@ export async function performOcr(
             verbose: opts.verbose,
           };
 
-          // Verify and improve the extracted text
-          const verifiedText = await verifyContent(extractedText, contentOpts);
+          // Verify and improve the extracted text, passing previous page text if available
+          const verifiedText = await verifyContent(extractedText, contentOpts, options.previousPageText);
 
           if (opts.verbose) {
             console.log('Content verification complete');
