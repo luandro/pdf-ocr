@@ -110,6 +110,10 @@ export function createCli(): Command {
     .option('-t, --timeout <number>', 'Timeout for OCR API requests in milliseconds', (value) => parseInt(value, 10), 30000)
     .option('-s, --sleep <number>', 'Time to sleep between processing pages in milliseconds', (value) => parseInt(value, 10), 5000)
     .option('-v, --verbose', 'Enable verbose logging for OCR process')
+    .option('--verify', 'Verify and improve OCR text using LLM')
+    .option('--max-tokens <number>', 'Maximum number of tokens for LLM verification', (value) => parseInt(value, 10), 1000)
+    .option('--temperature <number>', 'Temperature for LLM verification', (value) => parseFloat(value), 0.7)
+    .option('--top-p <number>', 'Top-p for LLM verification', (value) => parseFloat(value), 0.9)
     .action(async (options) => {
       try {
         // Resolve paths to absolute paths
@@ -121,7 +125,14 @@ export function createCli(): Command {
           maxRetries: options.retries,
           retryDelay: options.retryDelay,
           timeout: options.timeout,
-          verbose: options.verbose || false
+          verbose: options.verbose || false,
+          verifyContent: options.verify,
+          contentVerificationOptions: {
+            maxTokens: options.maxTokens,
+            temperature: options.temperature,
+            topP: options.topP,
+            verbose: options.verbose || false
+          }
         };
 
         console.log(`Processing ${inputPath}...`);

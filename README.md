@@ -40,6 +40,9 @@ npm start -- --input input.pdf --output output.pdf --retries 5 --timeout 60000 -
 
 # Process one page at a time with a longer sleep between pages
 npm start -- --input input.pdf --output output.pdf --max-pages 10 --sleep 10000 --verbose
+
+# Verify and improve OCR text using DeepSeek LLM
+npm start -- --input input.pdf --output output.pdf --verify --verbose
 ```
 
 Or if installed globally:
@@ -64,6 +67,12 @@ pdf-ocr --input input.pdf --output output.pdf
 - `--timeout, -t`: Timeout for OCR API requests in milliseconds (default: 30000)
 - `--sleep, -s`: Time to sleep between processing pages in milliseconds (default: 5000)
 - `--verbose, -v`: Enable verbose logging for OCR process
+
+### Content Verification Options
+- `--verify`: Verify and improve OCR text using DeepSeek LLM
+- `--max-tokens`: Maximum number of tokens for LLM verification (default: 1000)
+- `--temperature`: Temperature for LLM verification (default: 0.7)
+- `--top-p`: Top-p for LLM verification (default: 0.9)
 
 ## Development
 
@@ -90,15 +99,17 @@ The application is composed of several modules:
 1. **PDF Splitter** (`src/splitPdf.ts`): Splits a multi-page PDF into individual single-page PDFs.
 2. **PDF-to-PNG Renderer** (`src/renderPdfToPng.ts`): Converts a single-page PDF to a PNG image.
 3. **OCR Module** (`src/ocr.ts`): Uses Mistral API to extract text from images.
-4. **Text-to-PDF Converter** (`src/textToPdf.ts`): Converts extracted text back to a PDF document.
-5. **PDF Merger** (`src/mergePdfs.ts`): Combines multiple PDFs into a single document.
-6. **CLI** (`src/cli.ts`): Provides a command-line interface and orchestrates the workflow.
+4. **Content Verification** (`src/contentVerification.ts`): Uses DeepSeek LLM to verify and improve OCR text.
+5. **Text-to-PDF Converter** (`src/textToPdf.ts`): Converts extracted text back to a PDF document.
+6. **PDF Merger** (`src/mergePdfs.ts`): Combines multiple PDFs into a single document.
+7. **CLI** (`src/cli.ts`): Provides a command-line interface and orchestrates the workflow.
 
 The processing pipeline works as follows:
 
 1. The input PDF is split into individual pages.
 2. Each page is processed one at a time with a configurable sleep between pages:
    - The PDF page is sent directly to Mistral API for OCR.
+   - (Optional) The extracted text is verified and improved using DeepSeek LLM.
    - The extracted text is converted back to PDF format.
 3. All the individual PDFs are merged into a single output PDF.
 
@@ -106,6 +117,7 @@ The processing pipeline works as follows:
 
 - Node.js 14 or higher
 - Mistral API key (sign up at https://mistral.ai)
+- (Optional) Together.ai API key for content verification (sign up at https://together.ai)
 
 ## Limitations
 
@@ -116,6 +128,7 @@ The processing pipeline works as follows:
 ## Troubleshooting
 
 - **Error: MISTRAL_API_KEY environment variable is not set**: Make sure you've created a `.env` file with your API key.
+- **Error: TOGETHER_API_KEY environment variable is not set**: Make sure you've added your Together.ai API key to the `.env` file if you're using the `--verify` option.
 - **Error: Invalid PDF**: The input file might be corrupted or password-protected.
 - **Slow processing**: Try increasing the concurrency parameter (`--concurrency`) to process more pages in parallel.
 - **Network errors during OCR**: If you encounter network errors like "socket connection was closed unexpectedly", try the following:
@@ -125,6 +138,7 @@ The processing pipeline works as follows:
   - Increase the delay between retries with `--retry-delay 2000` (2 seconds)
   - Use the `--verbose` flag to see detailed logs of the OCR process
   - Limit the number of pages processed at once with `--max-pages 5`
+- **Poor OCR quality**: Try using the `--verify` option to improve the OCR text using DeepSeek LLM.
 
 ## License
 

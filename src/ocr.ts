@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
+// Import types for content verification
+import type { ContentVerificationOptions } from './contentVerification';
+
 /**
  * Options for OCR processing
  */
@@ -16,6 +19,10 @@ export interface OcrOptions {
   verbose?: boolean;
   /** Timeout for the API request in milliseconds (default: 30000) */
   timeout?: number;
+  /** Whether to verify and improve OCR text using LLM (default: false) */
+  verifyContent?: boolean;
+  /** Options for content verification */
+  contentVerificationOptions?: ContentVerificationOptions;
 }
 
 /**
@@ -83,6 +90,8 @@ export async function performOcr(
     retryDelay: options.retryDelay ?? 1000,
     verbose: options.verbose ?? false,
     timeout: options.timeout ?? 30000,
+    verifyContent: options.verifyContent ?? false,
+    contentVerificationOptions: options.contentVerificationOptions ?? {},
   };
 
   // Check if API key is set
@@ -143,6 +152,45 @@ export async function performOcr(
           console.log('First 200 characters of extracted text:', extractedText.substring(0, 200));
         } else {
           console.log('No text was extracted from the PDF');
+        }
+      }
+
+      // Verify and improve the extracted text if enabled
+      if (opts.verifyContent && extractedText.length > 0) {
+        if (opts.verbose) {
+          console.log('Verifying and improving OCR text...');
+        }
+
+        try {
+          // Dynamically import the content verification module
+          const { verifyContent } = await import('./contentVerification');
+
+          // Pass the verbose option from OCR options to content verification options
+          const contentOpts = {
+            ...opts.contentVerificationOptions,
+            verbose: opts.verbose,
+          };
+
+          // Verify and improve the extracted text
+          const verifiedText = await verifyContent(extractedText, contentOpts);
+
+          if (opts.verbose) {
+            console.log('Content verification complete');
+            if (verifiedText !== extractedText) {
+              console.log('Text was improved by content verification');
+            } else {
+              console.log('No changes were made by content verification');
+            }
+          }
+
+          return verifiedText;
+        } catch (verifyError) {
+          // If content verification fails, log the error and return the original text
+          if (opts.verbose) {
+            console.error('Content verification failed:',
+              verifyError instanceof Error ? verifyError.message : String(verifyError));
+            console.log('Returning original OCR text');
+          }
         }
       }
 

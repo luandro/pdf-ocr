@@ -33,22 +33,6 @@ describe('OCR Module', () => {
   });
 
   test('should call Mistral API with correct parameters', async () => {
-    // Mock file upload response
-    const mockFileUpload = jest.fn().mockResolvedValue({
-      id: 'test-file-id',
-      object: 'file',
-      bytes: 1000,
-      created_at: Date.now(),
-      filename: 'test.pdf',
-      purpose: 'ocr'
-    });
-
-    // Mock signed URL response
-    const mockGetSignedUrl = jest.fn().mockResolvedValue({
-      url: 'https://example.com/signed-url',
-      expires_at: Date.now() + 3600000
-    });
-
     // Mock OCR process response
     const mockOcrProcess = jest.fn().mockResolvedValue({
       content: 'This is a sample text for OCR testing'
@@ -56,10 +40,6 @@ describe('OCR Module', () => {
 
     // Setup the Mistral mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
-      files: {
-        upload: mockFileUpload,
-        getSignedUrl: mockGetSignedUrl
-      },
       ocr: {
         process: mockOcrProcess
       }
@@ -68,47 +48,18 @@ describe('OCR Module', () => {
     // Call the function
     await performOcr(samplePdfBuffer);
 
-    // Verify file upload was called with the correct parameters
-    expect(mockFileUpload).toHaveBeenCalledWith({
-      file: {
-        fileName: expect.stringMatching(/document-.*\.pdf/),
-        content: samplePdfBuffer
-      }
-    });
-
-    // Verify getSignedUrl was called with the correct file ID
-    expect(mockGetSignedUrl).toHaveBeenCalledWith({
-      fileId: 'test-file-id'
-    });
-
-    // Verify OCR process was called with the correct URL
+    // Verify OCR process was called with the correct parameters
     expect(mockOcrProcess).toHaveBeenCalledWith({
       model: 'mistral-ocr-latest',
       document: {
         type: 'document_url',
-        documentUrl: 'https://example.com/signed-url'
+        documentUrl: `data:application/pdf;base64,${samplePdfBuffer.toString('base64')}`
       }
     });
   });
 
-  test('should return extracted text from response', async () => {
+  test('should return extracted text from response (content field)', async () => {
     const expectedText = 'This is a sample text for OCR testing';
-
-    // Mock file upload response
-    const mockFileUpload = jest.fn().mockResolvedValue({
-      id: 'test-file-id',
-      object: 'file',
-      bytes: 1000,
-      created_at: Date.now(),
-      filename: 'test.pdf',
-      purpose: 'ocr'
-    });
-
-    // Mock signed URL response
-    const mockGetSignedUrl = jest.fn().mockResolvedValue({
-      url: 'https://example.com/signed-url',
-      expires_at: Date.now() + 3600000
-    });
 
     // Mock OCR process response
     const mockOcrProcess = jest.fn().mockResolvedValue({
@@ -117,10 +68,6 @@ describe('OCR Module', () => {
 
     // Setup the Mistral mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
-      files: {
-        upload: mockFileUpload,
-        getSignedUrl: mockGetSignedUrl
-      },
       ocr: {
         process: mockOcrProcess
       }
@@ -133,32 +80,73 @@ describe('OCR Module', () => {
     expect(result).toBe(expectedText);
   });
 
+  test('should return extracted text from response (pages with markdown)', async () => {
+    const page1Text = 'Page 1 markdown content';
+    const page2Text = 'Page 2 markdown content';
+    const expectedText = `${page1Text}\n\n${page2Text}`;
+
+    // Mock OCR process response with pages
+    const mockOcrProcess = jest.fn().mockResolvedValue({
+      pages: [
+        { index: 0, markdown: page1Text },
+        { index: 1, markdown: page2Text }
+      ],
+      model: 'mistral-ocr-latest',
+      usageInfo: {
+        pagesProcessed: 2,
+        docSizeBytes: 1000
+      }
+    });
+
+    // Setup the Mistral mock
+    (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      ocr: {
+        process: mockOcrProcess
+      }
+    } as unknown as Mistral));
+
+    // Call the function
+    const result = await performOcr(samplePdfBuffer);
+
+    // Verify the result
+    expect(result).toBe(expectedText);
+  });
+
+  test('should handle empty pages in OCR response', async () => {
+    // Mock OCR process response with empty pages
+    const mockOcrProcess = jest.fn().mockResolvedValue({
+      pages: [
+        { index: 0, markdown: '' },
+        { index: 1, markdown: undefined },
+        { index: 2 } // No markdown field
+      ],
+      model: 'mistral-ocr-latest',
+      usageInfo: {
+        pagesProcessed: 3,
+        docSizeBytes: 1000
+      }
+    });
+
+    // Setup the Mistral mock
+    (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
+      ocr: {
+        process: mockOcrProcess
+      }
+    } as unknown as Mistral));
+
+    // Call the function with verbose mode to test the "No text was extracted" branch
+    const result = await performOcr(samplePdfBuffer, { verbose: true });
+
+    // Verify the result is an empty string
+    expect(result).toBe('');
+  });
+
   test('should handle API errors gracefully', async () => {
-    // Mock file upload response
-    const mockFileUpload = jest.fn().mockResolvedValue({
-      id: 'test-file-id',
-      object: 'file',
-      bytes: 1000,
-      created_at: Date.now(),
-      filename: 'test.pdf',
-      purpose: 'ocr'
-    });
-
-    // Mock signed URL response
-    const mockGetSignedUrl = jest.fn().mockResolvedValue({
-      url: 'https://example.com/signed-url',
-      expires_at: Date.now() + 3600000
-    });
-
     // Mock OCR process to throw an error
     const mockOcrProcess = jest.fn().mockRejectedValue(new Error('API Error'));
 
     // Setup the Mistral mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
-      files: {
-        upload: mockFileUpload,
-        getSignedUrl: mockGetSignedUrl
-      },
       ocr: {
         process: mockOcrProcess
       }
@@ -184,22 +172,6 @@ describe('OCR Module', () => {
   });
 
   test('should handle non-Error exceptions', async () => {
-    // Mock file upload response
-    const mockFileUpload = jest.fn().mockResolvedValue({
-      id: 'test-file-id',
-      object: 'file',
-      bytes: 1000,
-      created_at: Date.now(),
-      filename: 'test.pdf',
-      purpose: 'ocr'
-    });
-
-    // Mock signed URL response
-    const mockGetSignedUrl = jest.fn().mockResolvedValue({
-      url: 'https://example.com/signed-url',
-      expires_at: Date.now() + 3600000
-    });
-
     // Mock OCR process to throw a non-Error value
     const mockOcrProcess = jest.fn().mockImplementation(() => {
       throw 'Not an Error object';
@@ -207,10 +179,6 @@ describe('OCR Module', () => {
 
     // Setup the Mistral mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
-      files: {
-        upload: mockFileUpload,
-        getSignedUrl: mockGetSignedUrl
-      },
       ocr: {
         process: mockOcrProcess
       }
@@ -222,22 +190,6 @@ describe('OCR Module', () => {
   });
 
   test('should retry on failure and succeed eventually', async () => {
-    // Mock file upload response
-    const mockFileUpload = jest.fn().mockResolvedValue({
-      id: 'test-file-id',
-      object: 'file',
-      bytes: 1000,
-      created_at: Date.now(),
-      filename: 'test.pdf',
-      purpose: 'ocr'
-    });
-
-    // Mock signed URL response
-    const mockGetSignedUrl = jest.fn().mockResolvedValue({
-      url: 'https://example.com/signed-url',
-      expires_at: Date.now() + 3600000
-    });
-
     // Mock OCR process to fail twice then succeed
     const mockOcrProcess = jest.fn()
       .mockRejectedValueOnce(new Error('First failure'))
@@ -246,10 +198,6 @@ describe('OCR Module', () => {
 
     // Setup the Mistral mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
-      files: {
-        upload: mockFileUpload,
-        getSignedUrl: mockGetSignedUrl
-      },
       ocr: {
         process: mockOcrProcess
       }
@@ -267,31 +215,9 @@ describe('OCR Module', () => {
 
     // Verify that the API was called exactly 3 times (2 failures + 1 success)
     expect(mockOcrProcess).toHaveBeenCalledTimes(3);
-
-    // Verify that file upload was called 3 times (once for each attempt)
-    expect(mockFileUpload).toHaveBeenCalledTimes(3);
-
-    // Verify that getSignedUrl was called 3 times (once for each attempt)
-    expect(mockGetSignedUrl).toHaveBeenCalledTimes(3);
   });
 
   test('should respect timeout option', async () => {
-    // Mock file upload response
-    const mockFileUpload = jest.fn().mockResolvedValue({
-      id: 'test-file-id',
-      object: 'file',
-      bytes: 1000,
-      created_at: Date.now(),
-      filename: 'test.pdf',
-      purpose: 'ocr'
-    });
-
-    // Mock signed URL response
-    const mockGetSignedUrl = jest.fn().mockResolvedValue({
-      url: 'https://example.com/signed-url',
-      expires_at: Date.now() + 3600000
-    });
-
     // Mock OCR process response
     const mockOcrProcess = jest.fn().mockResolvedValue({
       content: 'Success with timeout'
@@ -299,10 +225,6 @@ describe('OCR Module', () => {
 
     // Setup the Mistral mock
     (Mistral as jest.MockedClass<typeof Mistral>).mockImplementation(() => ({
-      files: {
-        upload: mockFileUpload,
-        getSignedUrl: mockGetSignedUrl
-      },
       ocr: {
         process: mockOcrProcess
       }
