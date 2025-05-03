@@ -1,7 +1,8 @@
 # PDF-OCR CLI Tool
 
-[![Test Coverage](https://github.com/yourusername/pdf-ocr-cli/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/yourusername/pdf-ocr-cli/actions/workflows/npm-publish.yml)
-[![npm version](https://badge.fury.io/js/pdf-ocr-cli.svg)](https://badge.fury.io/js/pdf-ocr-cli)
+[![codecov](https://codecov.io/gh/luandro/pdf-ocr/graph/badge.svg?token=JEQ78WHEBA)](https://codecov.io/gh/luandro/pdf-ocr)
+[![npm publish](https://github.com/luandro/pdf-ocr/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/luandro/pdf-ocr/actions/workflows/npm-publish.yml)
+[![npm version](https://badge.fury.io/js/pdf-ocr.svg)](https://badge.fury.io/js/pdf-ocr)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 
 A TypeScript CLI application that:
@@ -18,7 +19,7 @@ This tool is useful for making scanned PDFs searchable and for extracting text f
 
 ```bash
 # Install globally
-npm install -g pdf-ocr-cli
+npm install -g pdf-ocr
 
 # Create a .env file in your working directory
 echo "MISTRAL_API_KEY=your_mistral_api_key_here" > .env
@@ -30,8 +31,8 @@ echo "TOGETHER_API_KEY=your_together_api_key_here" >> .env
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pdf-ocr-cli.git
-cd pdf-ocr-cli
+git clone https://github.com/luandro/pdf-ocr.git
+cd pdf-ocr
 
 # Install dependencies
 npm install
