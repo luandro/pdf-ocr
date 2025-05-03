@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/luandro/pdf-ocr/graph/badge.svg?token=JEQ78WHEBA)](https://codecov.io/gh/luandro/pdf-ocr)
 [![npm publish](https://github.com/luandro/pdf-ocr/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/luandro/pdf-ocr/actions/workflows/npm-publish.yml)
-[![npm version](https://badge.fury.io/js/pdf-ocr.svg)](https://badge.fury.io/js/pdf-ocr)
+[![npm version](https://badge.fury.io/js/pdf-ocr-cli.svg)](https://badge.fury.io/js/pdf-ocr-cli)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 
 ## Overview
