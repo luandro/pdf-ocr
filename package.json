@@ -1,6 +1,7 @@
 {
-  "name": "pdf-ocr",
+  "name": "pdf-ocr-cli",
   "version": "1.0.0",
+  "description": "A CLI tool for OCR processing of PDF files using Mistral API with optional LLM verification",
   "main": "dist/cli.js",
   "bin": {
     "pdf-ocr": "./dist/cli.js"
@@ -14,16 +15,32 @@
     "test:all": "npm run test && npm run test:sample && npm run test:multi-page && npm run test:verify",
     "build": "tsc",
     "start": "node dist/cli.js",
-    "dev": "ts-node src/cli.ts"
+    "dev": "ts-node src/cli.ts",
+    "prepublishOnly": "npm run build"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "pdf",
+    "ocr",
+    "cli",
+    "mistral",
+    "ai",
+    "text-extraction",
+    "pdf-processing",
+    "deepseek",
+    "llm"
+  ],
+  "author": "Your Name <your.email@example.com>",
   "license": "ISC",
-  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/pdf-ocr-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/pdf-ocr-cli/issues"
+  },
+  "homepage": "https://github.com/yourusername/pdf-ocr-cli#readme",
   "dependencies": {
     "@mistralai/mistralai": "^1.6.0",
-    "@types/form-data": "^2.2.1",
-    "@types/node-fetch": "^2.6.12",
     "@web-std/file": "^3.0.3",
     "@web-std/form-data": "^3.1.0",
     "canvas": "^3.1.0",
@@ -35,12 +52,16 @@
     "pdf-lib": "^1.17.1",
     "pdf2pic": "^3.1.4",
     "sharp": "^0.34.1",
-    "together-ai": "^0.16.0",
     "uuid": "^11.1.0"
   },
+  "optionalDependencies": {
+    "together-typescript": "github:togethercomputer/together-typescript"
+  },
   "devDependencies": {
+    "@types/form-data": "^2.2.1",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.15.3",
+    "@types/node-fetch": "^2.6.12",
     "@types/uuid": "^10.0.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.3.2",

@@ -99,8 +99,8 @@ export function createCli(): Command {
 
   program
     .name('pdf-ocr')
-    .description('OCR a PDF file using Mistral API')
-    .version('1.0.0')
+    .description('OCR a PDF file using Mistral API with optional LLM verification')
+    .version(require('../package.json').version)
     .requiredOption('-i, --input <path>', 'Input PDF file path')
     .requiredOption('-o, --output <path>', 'Output PDF file path')
     .option('-c, --concurrency <number>', 'Number of pages to process in parallel', (value) => parseInt(value, 10), 2)

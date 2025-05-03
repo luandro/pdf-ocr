@@ -16,6 +16,7 @@ fixtures/*
 
 # Test output files
 test/output/
+test/generations/
 *.pdf
 *.txt
 !test/fixtures/*.pdf

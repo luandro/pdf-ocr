@@ -10,10 +10,24 @@ This tool is useful for making scanned PDFs searchable and for extracting text f
 
 ## Installation
 
+### Option 1: Install from npm
+
+```bash
+# Install globally
+npm install -g pdf-ocr-cli
+
+# Create a .env file in your working directory
+echo "MISTRAL_API_KEY=your_mistral_api_key_here" > .env
+# If you want to use content verification, also add:
+echo "TOGETHER_API_KEY=your_together_api_key_here" >> .env
+```
+
+### Option 2: Install from source
+
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pdf-ocr.git
-cd pdf-ocr
+git clone https://github.com/yourusername/pdf-ocr-cli.git
+cd pdf-ocr-cli
 
 # Install dependencies
 npm install
@@ -21,9 +35,9 @@ npm install
 # Build the project
 npm run build
 
-# Create a .env file with your Mistral API key
+# Create a .env file with your API keys
 cp .env.example .env
-# Edit .env with your actual API key
+# Edit .env with your actual API keys
 ```
 
 ## Usage
@@ -92,6 +106,16 @@ npm run build
 npm run dev -- --input input.pdf --output output.pdf
 ```
 
+### Continuous Integration
+
+This project uses GitHub Actions for continuous integration and automatic publishing to npm:
+
+- Every push to the main branch triggers the test suite
+- If tests pass, the package is automatically published to npm
+- To set up automatic publishing, add your NPM_TOKEN as a secret in your GitHub repository settings
+
+The workflow configuration is located in `.github/workflows/npm-publish.yml`.
+
 ## Architecture
 
 The application is composed of several modules:
@@ -140,6 +164,14 @@ The processing pipeline works as follows:
   - Limit the number of pages processed at once with `--max-pages 5`
 - **Poor OCR quality**: Try using the `--verify` option to improve the OCR text using DeepSeek LLM.
 
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a list of all notable changes to this project.
+
 ## License
 
-ISC
+This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
