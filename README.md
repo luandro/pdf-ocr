@@ -10,8 +10,11 @@
 A powerful TypeScript CLI tool that transforms scanned PDFs into searchable documents by:
 
 - Taking a PDF file input
-- Processing each page with Mistral API's OCR capabilities
-- Optionally verifying and improving text quality with Together.ai's free LLM
+- Intelligently detecting and splitting pages that contain two pages side by side
+- Detecting page content type (text, image, or empty) and handling each appropriately
+- Processing text pages with Mistral API's OCR capabilities
+- Preserving original image-only pages and skipping empty pages
+- Optionally verifying and improving text quality with Together.ai's free LLM, using previous page context
 - Reassembling everything into a searchable PDF
 
 Perfect for digitizing paper documents, making image-based PDFs searchable, and extracting text from scanned materials.
@@ -62,6 +65,15 @@ pdf-ocr --input input.pdf --output output.pdf
 
 # With verification to improve OCR quality
 pdf-ocr --input input.pdf --output output.pdf --verify
+
+# With automatic page split detection for book scans
+pdf-ocr --input book-scan.pdf --output book-text.pdf --detect-splits
+
+# With content type detection to handle images and empty pages
+pdf-ocr --input mixed-content.pdf --output processed.pdf --detect-content --preserve-images --skip-empty
+
+# With verification and all advanced features enabled
+pdf-ocr --input complex-document.pdf --output enhanced.pdf --verify --detect-splits --detect-content --preserve-images --skip-empty
 ```
 
 ## Common Use Cases
@@ -108,13 +120,17 @@ pdf-ocr --input input.pdf --output output.pdf --concurrency 1 --sleep 10000 --ve
 | `--sleep` | `-s` | Time between processing pages (ms) | 5000 |
 | `--verbose` | `-v` | Enable detailed logging | |
 
-### Verification Options
+### Verification and AI Options
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--verify` | Enable LLM verification | |
-| `--max-tokens` | Maximum tokens for verification | 1000 |
-| `--temperature` | Temperature for verification | 0.7 |
-| `--top-p` | Top-p for verification | 0.9 |
+| `--detect-splits` | Enable automatic page split detection | |
+| `--detect-content` | Detect page content type (text, image, empty) | |
+| `--preserve-images` | Preserve original image-only pages without OCR | |
+| `--skip-empty` | Skip empty pages | |
+| `--max-tokens` | Maximum tokens for LLM operations | 1000 |
+| `--temperature` | Temperature for LLM operations | 0.7 |
+| `--top-p` | Top-p for LLM operations | 0.9 |
 
 ## Advanced Installation
 
@@ -174,18 +190,27 @@ GitHub Actions automates testing and publishing:
 The application consists of these key modules:
 
 1. **PDF Splitter** (`src/splitPdf.ts`): Divides PDFs into individual pages
-2. **OCR Module** (`src/ocr.ts`): Extracts text using Mistral API
-3. **Content Verification** (`src/contentVerification.ts`): Improves text with LLM
-4. **Text-to-PDF Converter** (`src/textToPdf.ts`): Converts text back to PDF
-5. **PDF Merger** (`src/mergePdfs.ts`): Combines processed pages
-6. **CLI** (`src/cli.ts`): Provides the command interface
+2. **Page Split Detection** (`src/pageSplitDetection.ts`): Detects pages that need splitting
+3. **PDF Page Splitter** (`src/splitPdfPage.ts`): Splits pages with two pages side by side
+4. **Page Content Detection** (`src/pageContentDetection.ts`): Detects page content type (text, image, empty)
+5. **Page Preservation** (`src/preserveOriginalPage.ts`): Preserves original image-only pages
+6. **OCR Module** (`src/ocr.ts`): Extracts text using Mistral API
+7. **Content Verification** (`src/contentVerification.ts`): Improves text with LLM, using previous page context
+8. **Text-to-PDF Converter** (`src/textToPdf.ts`): Converts text back to PDF
+9. **PDF Merger** (`src/mergePdfs.ts`): Combines processed pages
+10. **CLI** (`src/cli.ts`): Provides the command interface
 
 ### Processing Pipeline
 
 1. Split input PDF into individual pages
 2. Process each page sequentially:
-   - Extract text with Mistral API OCR
-   - Optionally verify/improve text with Together.ai
+   - Check if the page contains two pages side by side (if enabled)
+   - Split the page into two separate pages if needed
+   - Detect page content type (text, image, empty) if enabled
+   - Skip empty pages if configured
+   - Preserve original image-only pages if configured
+   - Extract text with Mistral API OCR for text pages
+   - Optionally verify/improve text with Together.ai, using previous page context for better accuracy
    - Convert text back to PDF format
 3. Merge all processed pages into final PDF
 
@@ -193,7 +218,9 @@ The application consists of these key modules:
 
 - **API Key Errors**: Ensure your `.env` file contains valid API keys
 - **Network Issues**: Try increasing `--retries`, `--timeout`, and `--retry-delay`
-- **Poor OCR Quality**: Enable `--verify` to improve text with LLM
+- **Poor OCR Quality**: Enable `--verify` to improve text with LLM (now with previous page context for better accuracy)
+- **Book Scans with Two Pages**: Enable `--detect-splits` to automatically split pages
+- **Mixed Content Documents**: Enable `--detect-content` with `--preserve-images` and `--skip-empty`
 - **Processing Large Files**: Reduce `--concurrency` and increase `--sleep`
 - **Memory Issues**: Process fewer pages at once with `--max-pages`
 
