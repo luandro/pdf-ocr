@@ -14,12 +14,13 @@ coverage/
 fixtures/*
 !fixtures/*.pdf
 
-# Test output files
+# Test fixtures and output files
+test/fixtures/*
+!test/fixtures/*.pdf
 test/output/
 test/generations/
 *.pdf
 *.txt
-!test/fixtures/*.pdf
 
 # Logs
 *.log
