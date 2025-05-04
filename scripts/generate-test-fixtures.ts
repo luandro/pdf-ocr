@@ -154,11 +154,151 @@ async function generateInvalidPdf() {
   console.log('Generated invalid.pdf');
 }
 
+async function generateDoublePageSamplePdf() {
+  const pdfDoc = await PDFDocument.create();
+  const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+
+  // Create a page with two "pages" side by side (like a book spread)
+  const page = pdfDoc.addPage([1200, 600]); // Wider page to simulate two pages side by side
+  const { width, height } = page.getSize();
+
+  // Draw a line down the middle to simulate the spine of a book
+  page.drawLine({
+    start: { x: width / 2, y: 0 },
+    end: { x: width / 2, y: height },
+    thickness: 1,
+    color: rgb(0.7, 0.7, 0.7),
+  });
+
+  // Left page content
+  page.drawText('Left Page', {
+    x: width / 4 - 50,
+    y: height - 50,
+    size: 24,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+  page.drawText('This is the left side of a double-page spread.', {
+    x: 50,
+    y: height - 100,
+    size: 12,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+  page.drawText('Page 1', {
+    x: 50,
+    y: 50,
+    size: 12,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+
+  // Right page content
+  page.drawText('Right Page', {
+    x: (width * 3) / 4 - 50,
+    y: height - 50,
+    size: 24,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+  page.drawText('This is the right side of a double-page spread.', {
+    x: width / 2 + 50,
+    y: height - 100,
+    size: 12,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+  page.drawText('Page 2', {
+    x: width - 100,
+    y: 50,
+    size: 12,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+
+  // Add a second double-page spread
+  const page2 = pdfDoc.addPage([1200, 600]);
+
+  // Draw a line down the middle to simulate the spine of a book
+  page2.drawLine({
+    start: { x: width / 2, y: 0 },
+    end: { x: width / 2, y: height },
+    thickness: 1,
+    color: rgb(0.7, 0.7, 0.7),
+  });
+
+  // Left page content
+  page2.drawText('Left Page', {
+    x: width / 4 - 50,
+    y: height - 50,
+    size: 24,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+  page2.drawText('This is the left side of the second spread.', {
+    x: 50,
+    y: height - 100,
+    size: 12,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+  page2.drawText('Page 3', {
+    x: 50,
+    y: 50,
+    size: 12,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+
+  // Right page content
+  page2.drawText('Right Page', {
+    x: (width * 3) / 4 - 50,
+    y: height - 50,
+    size: 24,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+  page2.drawText('This is the right side of the second spread.', {
+    x: width / 2 + 50,
+    y: height - 100,
+    size: 12,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+  page2.drawText('Page 4', {
+    x: width - 100,
+    y: 50,
+    size: 12,
+    font: timesRomanFont,
+    color: rgb(0, 0, 0),
+  });
+
+  const pdfBytes = await pdfDoc.save();
+
+  // Save to both fixtures directories to ensure consistency
+  fs.writeFileSync(path.join(__dirname, '../fixtures/double-page-sample.pdf'), pdfBytes);
+
+  // Create test/fixtures directory if it doesn't exist
+  const testFixturesDir = path.join(__dirname, '../test/fixtures');
+  if (!fs.existsSync(testFixturesDir)) {
+    fs.mkdirSync(testFixturesDir, { recursive: true });
+  }
+
+  fs.writeFileSync(path.join(__dirname, '../test/fixtures/double-page-sample.pdf'), pdfBytes);
+  console.log('Generated double-page-sample.pdf in both fixtures directories');
+}
+
 async function main() {
   // Create fixtures directory if it doesn't exist
   const fixturesDir = path.join(__dirname, '../fixtures');
   if (!fs.existsSync(fixturesDir)) {
     fs.mkdirSync(fixturesDir, { recursive: true });
+  }
+
+  // Create test/fixtures directory if it doesn't exist
+  const testFixturesDir = path.join(__dirname, '../test/fixtures');
+  if (!fs.existsSync(testFixturesDir)) {
+    fs.mkdirSync(testFixturesDir, { recursive: true });
   }
 
   // Create scripts directory if it doesn't exist
@@ -171,6 +311,7 @@ async function main() {
   await generateComplexPdf();
   await generateSinglePagePdf();
   await generateInvalidPdf();
+  await generateDoublePageSamplePdf();
 
   console.log('All test fixtures generated successfully!');
 }
