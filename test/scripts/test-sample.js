@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const inputFile = path.resolve(__dirname, '../fixtures/sample.pdf');
+const inputFile = path.resolve(__dirname, '../../fixtures/simple.pdf');
 const outputDir = path.resolve(__dirname, '../output');
 const outputFile = path.resolve(outputDir, 'sample-ocr.pdf');
 const maxPages = 3; // Process only the first 3 pages for testing

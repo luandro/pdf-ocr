@@ -6,7 +6,7 @@ const path = require('path');
 const { PDFDocument } = require('pdf-lib');
 
 // Configuration
-const inputFile = path.resolve(__dirname, '../fixtures/sample.pdf');
+const inputFile = path.resolve(__dirname, '../../fixtures/simple.pdf');
 const outputDir = path.resolve(__dirname, '../output');
 const outputFile = path.resolve(outputDir, 'multi-page-ocr.pdf');
 const multiPageFile = path.resolve(outputDir, 'multi-page.pdf');
